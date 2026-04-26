@@ -52,6 +52,12 @@ jobs:
       - name: Checkout
         uses: https://code.forgejo.org/actions/checkout@v4
 
+      - name: Install buildah
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends buildah ca-certificates
+          buildah --version
+
       - name: Resolve image tag
         id: tag
         run: |
