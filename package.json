@@ -1,0 +1,7 @@
+{
+  "name": "silencer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Slack bot for silencing Alertmanager alerts",
+  "license": "Apache-2.0"
+}

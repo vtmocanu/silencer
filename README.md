@@ -1,0 +1,214 @@
+# silencer
+
+A Slack bot that lets you silence [Prometheus Alertmanager](https://github.com/prometheus/alertmanager) alerts by replying directly in the Slack alert thread.
+
+## Overview
+
+Silencer integrates with Alertmanager to provide convenient alert silencing capabilities directly from Slack threads:
+
+- **Silence alerts** for specified durations (years, months, weeks, days, hours, minutes)
+- **Check current silences** for an alert
+- **Expire/delete silences** manually
+- Auto-extracts alert labels from the Alertmanager Slack attachment
+- Talks to Alertmanager's HTTP API directly — the AM URL is read from the Slack alert's silence-button, so a single bot can manage silences across multiple Alertmanager instances
+
+## Quick Start (Docker)
+
+```bash
+docker run -d --name silencer \
+  -e SLACK_APP_TOKEN=xapp-1-... \
+  -e SLACK_BOT_TOKEN=xoxb-... \
+  -p 3000:3000 \
+  ghcr.io/<TBD>/silencer:latest
+```
+
+Then invite the bot to your Alertmanager Slack channel and reply `s 1h` in any alert thread.
+
+To get the tokens, see [Slack App Configuration](#slack-app-configuration) below.
+
+## Configuration
+
+Silencer is configured entirely via environment variables:
+
+| Variable          | Required | Description                                                         |
+|-------------------|----------|---------------------------------------------------------------------|
+| `SLACK_APP_TOKEN` | yes      | App-Level Token for Socket Mode (starts with `xapp-`)               |
+| `SLACK_BOT_TOKEN` | yes      | Bot User OAuth Token (starts with `xoxb-`)                          |
+| `LOG_LEVEL`       | no       | Log level (`debug`, `info`, `warn`, `error`). Defaults to `info`.   |
+
+How you provide these is up to you — common options:
+
+- **Docker / docker-compose**: pass with `-e` or via an env-file
+- **Kubernetes**: store in a `Secret` and reference via `valueFrom.secretKeyRef`
+- **Secret managers**: External Secrets Operator, sealed-secrets, Infisical, Vault, AWS Secrets Manager — any tool that ultimately surfaces values as env vars works
+
+> **Note**: The Alertmanager URL is **not** configured via env var. Silencer extracts it from the silence-button URL on each Alertmanager Slack message.
+
+The container exposes port `3000` for Prometheus metrics (`/metrics`) and a liveness probe (`/healthz`).
+
+## Usage
+
+### Setup
+
+Invite the bot to your Alertmanager Slack channel:
+
+```
+/invite @Silencer
+```
+
+### Commands
+
+The bot **only works in threads of Alertmanager alert messages**. When an alert fires:
+
+1. Click on the alert message from Alertmanager (look for "🔴 FIRING" messages)
+2. Reply in the thread with one of the commands below
+3. The bot extracts alert labels and creates/manages silences in Alertmanager
+
+```text
+# Silence alerts
+s 1h                # Silence for 1 hour
+s 30m               # Silence for 30 minutes
+silence for 2d      # Silence for 2 days
+s 1d 2h 30m         # Silence for 1 day, 2 hours, 30 minutes
+s 2w                # Silence for 2 weeks
+s 1mo               # Silence for 1 month
+
+# Check existing silences
+check               # Shows active silences for this alert
+
+# Remove silences
+expire              # Delete all active silences for this alert
+```
+
+### Example Workflow
+
+1. Alertmanager posts: `🔴 [FIRING:1] HighMemoryUsage (app=frontend, env=prod)`
+2. You click the message to open its thread
+3. You reply in thread: `s 2h`
+4. Bot responds: `Alert has been silenced (id=abc-123) for 2 hours`
+5. Later you can check: reply `check` in the same thread
+6. Bot shows: `Already Silenced - ID=abc-123 for 1 hour 45 minutes remaining`
+
+### Important Notes
+
+- ✅ **Thread-only**: Bot only responds to commands in alert message threads
+- ✅ **Automatic label extraction**: Bot reads alert labels from Alertmanager attachments
+- ✅ **Multiple silences**: Can handle multiple active silences per alert
+- ✅ **Confirmation**: Always confirms actions with silence IDs
+- ⚠️ **Won't work** in regular channel messages or direct messages
+
+## Slack App Configuration
+
+### Prerequisites
+
+1. Create a new Slack App at https://api.slack.com/apps
+2. Use the manifest from `Silencer_manifest.json` to configure the app automatically
+3. Install the app to your workspace
+
+### Getting Required Tokens
+
+#### Bot User OAuth Token
+
+1. Navigate to **OAuth & Permissions** in your Slack app settings
+2. Click the workspace install button to install the app to your Slack workspace
+3. Copy the **Bot User OAuth Token** (starts with `xoxb-`) — this is `SLACK_BOT_TOKEN`
+
+#### App-Level Token
+
+1. Navigate to **Basic Information** → **App-Level Tokens**
+2. Click **Generate Token and Scopes**
+3. Give it a name (e.g., "Socket Mode Token")
+4. Add the `connections:write` scope
+5. Click **Generate** and copy the token (starts with `xapp-`) — this is `SLACK_APP_TOKEN`
+
+### Required Permissions
+
+The bot requires the following OAuth scopes (automatically configured via the manifest):
+
+- `app_mentions:read` — read messages that mention the app
+- `channels:history` — view messages in public channels
+- `chat:write` — send messages
+- `groups:history` — view messages in private channels
+- `im:history` — view direct messages
+- `users.profile:read` — view user profiles
+- `users:read` — view user information
+- `metadata.message:read` — receive message metadata
+- `mpim:history` — view group direct messages
+
+## Local Development
+
+> **Note**: The current `Taskfile.yml` pulls includes from an internal task repository and will be replaced with plain `npm` scripts in a future release. The commands below work today only inside that environment.
+
+1. Enter the devbox shell:
+
+   ```bash
+   devbox shell
+   ```
+
+2. Available commands via `go-task`:
+
+   ```bash
+   # Node.js code quality
+   go-task node:lint            # ESLint
+
+   # Security scanning
+   go-task kics:scan            # KICS IaC scan
+   go-task checkov:scan         # Checkov IaC scan
+   go-task hadolint:lint        # Hadolint Dockerfile linting
+   go-task trivy:code           # Trivy code scan
+
+   # Image scans (build the image first)
+   docker build -t silencer:local .
+   go-task trivy:image  IMAGE=silencer:local
+   go-task dive:analyze-ci IMAGE=silencer:local
+   go-task dockle:scan  IMAGE=silencer:local
+   ```
+
+3. To see all available tasks: `go-task --list`
+
+## Release Process
+
+This project uses semantic versioning with automatic releases triggered by conventional commits.
+
+### Commit Convention
+
+To trigger automatic releases, use conventional commit messages:
+
+#### Patch Release (1.0.0 → 1.0.1)
+
+```bash
+fix: corrected alert parsing logic
+fix(deps): update dependencies
+chore(deps): update dependencies
+```
+
+#### Minor Release (1.0.0 → 1.1.0)
+
+```bash
+feat: add support for regex silences
+feat(bot): implement bulk silence operations
+```
+
+#### Major Release (1.0.0 → 2.0.0)
+
+```bash
+feat!: redesigned command parsing structure
+fix!: changed silence duration format
+
+# Or with BREAKING CHANGE in the footer
+feat: new alertmanager API integration
+
+BREAKING CHANGE: removed support for legacy Slack message format
+```
+
+### Manual Release
+
+You can also trigger a release manually via workflow dispatch with options to:
+
+- Force a specific version bump (patch/minor/major)
+- Perform a dry run
+- Force a release even without conventional commits
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE).

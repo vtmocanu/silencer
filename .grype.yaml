@@ -1,0 +1,63 @@
+# Grype configuration for silencer container
+# These vulnerabilities are accepted for Node.js Slack bot environment
+
+ignore:
+  # Node.js npm package vulnerabilities - temporary suppressions until library updates
+  
+  # form-data: Unsafe random function in form-data
+  - vulnerability: GHSA-fjxv-7rqg-78g4
+    package:
+      name: form-data
+  
+  # request: bypass of SSRF mitigations when following a cross-protocol redirect
+  - vulnerability: GHSA-p8p7-x288-28g6
+    package:
+      name: request
+  
+  # tough-cookie: prototype pollution in cookie memstore
+  - vulnerability: GHSA-72xf-g2v4-qvf3
+    package:
+      name: tough-cookie
+
+  # tar: race condition leading to uninitialized memory exposure
+  # Fixed in tar 7.5.2, currently using 7.5.1
+  - vulnerability: GHSA-29xp-372q-xqph
+    package:
+      name: tar
+
+  # glob: Regular expression denial of service (ReDoS)
+  # Fixed in glob 10.5.0/11.1.0
+  - vulnerability: GHSA-5j98-mcp5-4vw2
+    package:
+      name: glob
+
+  # qs: Prototype pollution in qs
+  # Fixed in qs 6.14.1, affects versions 6.14.0 and 6.5.3
+  - vulnerability: GHSA-6rw7-vpxm-498p
+    package:
+      name: qs
+
+  # Busybox vulnerabilities - base Alpine system components
+  - vulnerability: CVE-2024-58251
+    package:
+      name: busybox
+  
+  - vulnerability: CVE-2024-58251
+    package:
+      name: busybox-binsh
+  
+  - vulnerability: CVE-2024-58251
+    package:
+      name: ssl_client
+  
+  - vulnerability: CVE-2025-46394
+    package:
+      name: busybox
+  
+  - vulnerability: CVE-2025-46394
+    package:
+      name: busybox-binsh
+  
+  - vulnerability: CVE-2025-46394
+    package:
+      name: ssl_client

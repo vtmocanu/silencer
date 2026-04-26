@@ -1,0 +1,77 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "angular",
+        "releaseRules": [
+          {"type": "feat", "release": "minor"},
+          {"type": "fix", "release": "patch"},
+          {"type": "perf", "release": "patch"},
+          {"type": "chore", "scope": "deps", "release": "patch"},
+          {"type": "chore", "scope": "dependencies", "release": "patch"},
+          {"type": "build", "scope": "deps", "release": "patch"},
+          {"breaking": true, "release": "major"},
+          {"revert": true, "release": "patch"}
+        ],
+        "parserOpts": {
+          "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING"]
+        }
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "angular",
+        "presetConfig": {
+          "types": [
+            {"type": "feat", "section": "✨ Features"},
+            {"type": "fix", "section": "🐛 Bug Fixes"},
+            {"type": "perf", "section": "⚡ Performance Improvements"},
+            {"type": "revert", "section": "⏪ Reverts"},
+            {"type": "docs", "section": "📚 Documentation", "hidden": false},
+            {"type": "style", "section": "💄 Styles", "hidden": false},
+            {"type": "chore", "scope": "deps", "section": "⬆️ Dependencies", "hidden": false},
+            {"type": "chore", "scope": "deps-dev", "section": "⬆️ Dependencies", "hidden": false},
+            {"type": "chore", "section": "🔧 Chores", "hidden": false},
+            {"type": "refactor", "section": "♻️ Code Refactoring", "hidden": false},
+            {"type": "test", "section": "✅ Tests", "hidden": false},
+            {"type": "build", "scope": "deps", "section": "⬆️ Dependencies", "hidden": false},
+            {"type": "build", "section": "📦 Build System"},
+            {"type": "ci", "section": "👷 CI/CD"}
+          ]
+        }
+      }
+    ],
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md"
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "verifyConditionsCmd": "echo 'Checking conditions...'",
+        "prepareCmd": "echo ${nextRelease.version} > VERSION",
+        "publishCmd": "echo 'Version ${nextRelease.version} published'",
+        "successCmd": "echo '::set-output name=new_version::${nextRelease.version}'"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md", "VERSION"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "successComment": false,
+        "failComment": false
+      }
+    ]
+  ]
+}

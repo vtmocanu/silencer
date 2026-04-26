@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": {
+    "kics":      "2.1.19",
+    "checkov":   "3.2.521",
+    "hadolint":  "2.14.0",
+    "trivy":     "0.69.3",
+    "skopeo":    "1.22.1",
+    "infisical": "0.41.90",
+    "dive":      "0.13.1",
+    "dockle": {
+      "version":            "0.4.15",
+      "excluded_platforms": ["aarch64-darwin"]
+    },
+    "kubernetes-helm":          "3.20.1",
+    "nodejs_22":                "22.22.2",
+    "eslint":                   "10.2.0",
+    "kind":                     "0.31.0",
+    "kubectl":                  "1.35.3",
+    "grype":                    "0.108.0"
+  },
+  "shell": {
+    "init_hook": [
+      "[ -z \"$CI\" ] && cat README.md || true"
+    ],
+    "scripts": {
+      "test": [
+        "echo \"Error: no test specified\" && exit 1"
+      ]
+    }
+  }
+}

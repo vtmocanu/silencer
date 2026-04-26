@@ -1,0 +1,24 @@
+# IDEs
+.cursor
+.vscode
+# GPTs
+.claude
+# just & task
+juster
+task-repo
+.task/remote
+.task/checksum
+# Env files
+.env
+# Helm
+charts/*.tgz
+helm/charts/*.tgz
+# Infisical
+.infisical.json
+# Terraform
+.terraform
+# Ansible
+.ansible/.lock
+# Renovate
+renovate-local.log
+renovate-packages.csv
