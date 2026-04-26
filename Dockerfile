@@ -1,6 +1,6 @@
 FROM node:24-alpine
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -g 1000 -S appgroup && adduser -u 1000 -S appuser -G appgroup
 
 WORKDIR /app
 
