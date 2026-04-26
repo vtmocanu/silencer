@@ -137,34 +137,23 @@ The bot requires the following OAuth scopes (automatically configured via the ma
 
 ## Local Development
 
-> **Note**: The current `Taskfile.yml` pulls includes from an internal task repository and will be replaced with plain `npm` scripts in a future release. The commands below work today only inside that environment.
+Build and run the container locally:
 
-1. Enter the devbox shell:
+```bash
+docker build -t silencer:local .
+docker run --rm \
+  -e SLACK_APP_TOKEN=xapp-1-... \
+  -e SLACK_BOT_TOKEN=xoxb-... \
+  silencer:local
+```
 
-   ```bash
-   devbox shell
-   ```
+Optional: a `devbox.json` is provided for reproducible local tooling (Node, ESLint, security scanners). If you have [devbox](https://www.jetify.com/devbox) installed:
 
-2. Available commands via `go-task`:
+```bash
+devbox shell
+```
 
-   ```bash
-   # Node.js code quality
-   go-task node:lint            # ESLint
-
-   # Security scanning
-   go-task kics:scan            # KICS IaC scan
-   go-task checkov:scan         # Checkov IaC scan
-   go-task hadolint:lint        # Hadolint Dockerfile linting
-   go-task trivy:code           # Trivy code scan
-
-   # Image scans (build the image first)
-   docker build -t silencer:local .
-   go-task trivy:image  IMAGE=silencer:local
-   go-task dive:analyze-ci IMAGE=silencer:local
-   go-task dockle:scan  IMAGE=silencer:local
-   ```
-
-3. To see all available tasks: `go-task --list`
+> **Note**: npm scripts and a CI workflow are still being set up for this repository. Until then, use `docker build` and the linters/scanners from `devbox shell` directly. Contributions welcome — see [issues](https://codeberg.org/vtmocanu/silencer/issues).
 
 ## Release Process
 
