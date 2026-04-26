@@ -46,7 +46,11 @@ env:
   OCI_REGISTRY: registry-1.docker.io
   OCI_NAMESPACE: vtmocanu
   # Pinned tool versions
-  HELM_VERSION: v3.18.0
+  # NOTE: helm v3.18.x has a regression where the first push to a not-yet-
+  # populated OCI repo fails with 401 (the initial HEAD lacks auth and the
+  # subsequent recovery is broken). Affects 3.18.0–3.18.3. Fixed in 3.19+.
+  # See helm/helm#30987 + PR #30992. Stay on v3.19+ for OCI publish.
+  HELM_VERSION: v3.20.2
   HELM_DOCS_VERSION: v1.14.2
   KUBECONFORM_VERSION: v0.6.7
   # Validate against this K8s version (matches Chart.yaml kubeVersion).
