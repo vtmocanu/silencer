@@ -31,6 +31,10 @@ on:
     paths:
       - 'helm/**'
       - '.forgejo/workflows/chart.yml'
+  # Manual trigger: useful for re-running after a transient registry failure
+  # without bumping Chart.yaml. The detection step uses registry presence
+  # (not git diff) so it Just Works without extra inputs.
+  workflow_dispatch: {}
 
 concurrency:
   group: chart-${{ github.ref }}
@@ -150,29 +154,39 @@ jobs:
             | tar -xz -C /tmp linux-amd64/helm
           install -m 0755 /tmp/linux-amd64/helm /usr/local/bin/helm
 
-      - name: Detect chart version change
+      - name: Detect whether chart version is already published
         id: detect
         run: |
           set -euo pipefail
-          # Extract `version:` from Chart.yaml at HEAD and HEAD~1. We use grep
-          # rather than yq to avoid an extra dependency (the field is a simple
-          # top-level scalar — `version: X.Y.Z`).
+          # Source of truth: the registry. We push iff the current Chart.yaml
+          # version is NOT yet present at oci://<registry>/<ns>/silencer-chart
+          # at that tag. This naturally handles:
+          #   - first-time publish (registry 404 → push)
+          #   - retry after a failed push (registry still 404 → push)
+          #   - workflow_dispatch reruns (no git diff needed)
+          #   - same-version subsequent commits (registry 200 → skip)
+          #   - genuine version bump (new tag 404 → push)
+          # The previous git-diff approach couldn't recover from a failed push
+          # without bumping the version, since the next commit looked identical
+          # to the prior one.
           curr=$(grep -E '^version:' "${CHART_DIR}/Chart.yaml" | awk '{print $2}' | tr -d '"' )
-          prev=$(git show HEAD~1:"${CHART_DIR}/Chart.yaml" 2>/dev/null \
-                  | grep -E '^version:' | awk '{print $2}' | tr -d '"' || true)
-          echo "current=${curr}"
-          echo "previous=${prev:-<none>}"
           if [[ -z "${curr}" ]]; then
             echo "::error::Chart.yaml has no version field"
             exit 1
           fi
-          if [[ "${curr}" != "${prev}" ]]; then
-            echo "Version changed (${prev:-<new>} → ${curr}) — release will run."
+          ref="oci://${OCI_REGISTRY}/${OCI_NAMESPACE}/silencer-chart"
+          echo "Probing ${ref} for version ${curr}…"
+          # `helm show chart` returns 0 if the chart+version exists in the
+          # registry, non-zero otherwise. Works anonymously for public repos.
+          # We swallow stderr because helm prints a noisy "Error: …" on 404
+          # which is the expected outcome on first push.
+          if helm show chart "${ref}" --version "${curr}" >/dev/null 2>&1; then
+            echo "Chart ${curr} is already published in the registry — skipping push."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Chart ${curr} is NOT yet in the registry — will publish."
             echo "changed=true"   >> "$GITHUB_OUTPUT"
             echo "version=${curr}" >> "$GITHUB_OUTPUT"
-          else
-            echo "Version unchanged (${curr}) — skipping release."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Package chart
