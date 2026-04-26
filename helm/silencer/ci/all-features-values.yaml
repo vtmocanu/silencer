@@ -1,0 +1,50 @@
+# All optional features turned on. Exercises ServiceMonitor, VPA, PDB,
+# NetworkPolicy, plus extra envs/volumes and a non-default replicaCount.
+secrets:
+  mode: existing
+  existing:
+    name: silencer-test
+
+# >1 replica intentionally — chart should still render cleanly even though
+# NOTES.txt warns about it.
+replicaCount: 2
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+
+verticalPodAutoscaler:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+networkPolicy:
+  enabled: true
+  ingress:
+    fromNamespaceSelectors:
+      - matchLabels:
+          kubernetes.io/metadata.name: monitoring
+    fromPodSelectors:
+      - matchLabels:
+          app.kubernetes.io/name: prometheus
+
+extraEnv:
+  - name: NODE_OPTIONS
+    value: "--max-old-space-size=96"
+
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+
+extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
+
+podLabels:
+  team: sre
+
+podAnnotations:
+  example.com/owner: monitoring

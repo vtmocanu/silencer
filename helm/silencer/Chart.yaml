@@ -1,0 +1,50 @@
+apiVersion: v2
+# Chart name is suffixed with `-chart` so the OCI artifact at
+# docker.io/vtmocanu/silencer-chart doesn't collide with the container image
+# at docker.io/vtmocanu/silencer (Docker Hub repos are flat — they cannot
+# differentiate artifacts by media type once tags overlap). This follows the
+# Helm project's own recommendation in helm-www#1717. In-cluster resource
+# names stay `silencer-*` via _helpers.tpl.
+name: silencer-chart
+description: |
+  Silencer is a Slack bot that silences Prometheus Alertmanager alerts via
+  thread replies. Reply `s 1h` in any Alertmanager alert thread to create a
+  matching silence.
+type: application
+
+# Chart's own SemVer. Bump independently of appVersion.
+version: 0.1.0
+
+# Upstream application version. Tracks docker.io/vtmocanu/silencer tags
+# verbatim (the published tags include the leading `v`, e.g. v2.0.1).
+appVersion: "v2.0.1"
+
+kubeVersion: ">=1.27.0-0"
+
+home: https://codeberg.org/vtmocanu/silencer
+sources:
+  - https://codeberg.org/vtmocanu/silencer
+
+icon: https://codeberg.org/vtmocanu/silencer/raw/branch/main/logo.png
+
+keywords:
+  - alertmanager
+  - prometheus
+  - slack
+  - chatops
+  - silencing
+  - monitoring
+  - observability
+
+maintainers:
+  - name: Vlad Mocanu
+    url: https://codeberg.org/vtmocanu
+
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: Source
+      url: https://codeberg.org/vtmocanu/silencer
+    - name: Container image
+      url: https://hub.docker.com/r/vtmocanu/silencer
+  artifacthub.io/category: monitoring

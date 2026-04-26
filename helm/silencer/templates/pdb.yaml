@@ -1,0 +1,26 @@
+{{- if .Values.podDisruptionBudget.enabled -}}
+{{- $pdb := .Values.podDisruptionBudget -}}
+{{- if and $pdb.minAvailable $pdb.maxUnavailable -}}
+{{- fail "podDisruptionBudget.minAvailable and podDisruptionBudget.maxUnavailable are mutually exclusive" -}}
+{{- end -}}
+{{- if and (not $pdb.minAvailable) (not $pdb.maxUnavailable) -}}
+{{- fail "podDisruptionBudget requires either minAvailable or maxUnavailable" -}}
+{{- end -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "silencer.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "silencer.labels" . | nindent 4 }}
+spec:
+  {{- with $pdb.minAvailable }}
+  minAvailable: {{ . }}
+  {{- end }}
+  {{- with $pdb.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "silencer.selectorLabels" . | nindent 6 }}
+{{- end }}

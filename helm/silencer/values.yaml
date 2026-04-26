@@ -1,0 +1,263 @@
+# -- Override the chart name used in templates. Defaults to the chart name.
+nameOverride: ""
+# -- Override the fully qualified release name. Defaults to "<release>-<chart>".
+fullnameOverride: ""
+
+image:
+  # -- Container image repository.
+  repository: docker.io/vtmocanu/silencer
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+  # -- Image tag. Defaults to the chart's appVersion when empty.
+  tag: ""
+  # -- Pin to an immutable digest (e.g. `sha256:abc…`). Wins over `tag` when set.
+  digest: ""
+
+# -- imagePullSecrets to use for pulling the image. Names of existing Secrets.
+imagePullSecrets: []
+# - name: my-registry-creds
+
+# -- Number of pod replicas. Silencer uses Slack Socket Mode, which delivers
+# each event to exactly one connected client; running >1 replica risks
+# duplicate Alertmanager silences when both pods react to the same thread
+# message. Keep this at 1 unless you have a coordination layer.
+replicaCount: 1
+
+# -- Deployment update strategy. `Recreate` avoids two pods holding
+# Socket Mode connections during a rollout, which is the safest default
+# for single-replica socket-mode bots.
+updateStrategy:
+  type: Recreate
+
+# -- Pod-level annotations. The chart automatically adds a checksum
+# annotation that triggers a rollout when secret values change.
+podAnnotations: {}
+# -- Pod-level labels.
+podLabels: {}
+
+# -- Pod-level securityContext. Defaults to non-root + restricted PSS.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container-level securityContext. Defaults to a hardened profile that
+# satisfies the Kubernetes "restricted" Pod Security Standard.
+securityContext:
+  allowPrivilegeEscalation: false
+  privileged: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Resource requests and limits. Memory limit is set conservatively for
+# the Node.js runtime; tune via VPA if enabled.
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# -- Termination grace period. Keep low; the bot is stateless.
+terminationGracePeriodSeconds: 30
+
+# -- Priority class. Empty string falls through to the namespace default.
+priorityClassName: ""
+
+# -- nodeSelector for pod scheduling.
+nodeSelector: {}
+# -- Pod tolerations.
+tolerations: []
+# -- Pod affinity / anti-affinity.
+affinity: {}
+# -- Pod topology spread constraints.
+topologySpreadConstraints: []
+
+# Probes target the bot's `/healthz` endpoint, which returns 503 when the
+# Slack socket-mode connection has been down longer than the grace window.
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+startupProbe:
+  enabled: true
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 5
+  failureThreshold: 12  # 60s to come up
+
+# -- Extra environment variables passed to the container. Use this to
+# override `LOG_LEVEL` or pass app-specific overrides.
+extraEnv: []
+# - name: LOG_LEVEL
+#   value: info
+
+# -- Extra envFrom sources (configMapRef / secretRef). Useful when secrets
+# are managed by an out-of-band controller.
+extraEnvFrom: []
+# - secretRef:
+#     name: my-other-secret
+
+# -- Extra volumes added to the pod.
+extraVolumes: []
+# -- Extra volume mounts added to the container.
+extraVolumeMounts: []
+
+logLevel: info  # -- Sets LOG_LEVEL env var. One of: debug, info, warn, error.
+
+# Secret source. Pick exactly one mode:
+#   existing       — reference an existing Secret you manage out-of-band
+#   create         — chart creates the Secret from values (NOT recommended for
+#                    production; values land in Helm release storage)
+#   externalSecret — chart creates an ExternalSecret CR (External Secrets
+#                    Operator must be installed separately)
+secrets:
+  # -- One of: existing, create, externalSecret.
+  mode: existing
+
+  existing:
+    # -- Name of the existing Secret. Required when mode=existing.
+    name: silencer
+    # -- Key inside the Secret holding the Slack app-level token.
+    appTokenKey: SLACK_APP_TOKEN
+    # -- Key inside the Secret holding the Slack bot OAuth token.
+    botTokenKey: SLACK_BOT_TOKEN
+
+  create:
+    # -- App-level token (xapp-…). Required when mode=create.
+    appToken: ""
+    # -- Bot OAuth token (xoxb-…). Required when mode=create.
+    botToken: ""
+    # -- Extra annotations on the created Secret.
+    annotations: {}
+
+  externalSecret:
+    # -- Name of the ClusterSecretStore or SecretStore.
+    secretStoreRef:
+      name: ""
+      kind: ClusterSecretStore
+    # -- Refresh interval for the ExternalSecret.
+    refreshInterval: 1h
+    # -- Remote keys for each token. The `key` field follows your provider's
+    # conventions (e.g. Infisical: "/path/to/secret"; AWS: "/prod/silencer").
+    appToken:
+      remoteRef:
+        key: ""
+        property: ""
+    botToken:
+      remoteRef:
+        key: ""
+        property: ""
+    # -- Extra annotations on the created ExternalSecret.
+    annotations: {}
+
+service:
+  # -- Service type. ClusterIP is correct for the bot; it does not need to
+  # be reachable from outside the cluster.
+  type: ClusterIP
+  # -- Service port (the cluster-internal port).
+  port: 3000
+  # -- Extra annotations on the Service.
+  annotations: {}
+
+serviceAccount:
+  # -- Whether to create a ServiceAccount.
+  create: true
+  # -- Name of the ServiceAccount. Auto-generated if empty and create=true.
+  name: ""
+  # -- Extra annotations on the ServiceAccount.
+  annotations: {}
+  # -- Whether to mount the API token. Silencer doesn't talk to the K8s API,
+  # so disable by default.
+  automountServiceAccountToken: false
+
+# Optional Prometheus Operator ServiceMonitor for scraping `/metrics`.
+serviceMonitor:
+  # -- Create a ServiceMonitor. Requires the Prometheus Operator CRD.
+  enabled: false
+  # -- Scrape interval.
+  interval: 30s
+  # -- Scrape timeout.
+  scrapeTimeout: 10s
+  # -- Metric path on the bot.
+  path: /metrics
+  # -- Extra labels on the ServiceMonitor (often used to match Prometheus
+  # `serviceMonitorSelector`).
+  labels: {}
+  # -- Relabelings applied before scraping.
+  relabelings: []
+  # -- Relabelings applied after scraping.
+  metricRelabelings: []
+
+# Optional VerticalPodAutoscaler. Requires the VPA CRD.
+verticalPodAutoscaler:
+  # -- Create a VPA.
+  enabled: false
+  # -- VPA update mode (Off, Initial, Recreate, Auto).
+  updateMode: Auto
+  # -- Per-container resource policy.
+  resourcePolicy:
+    containerPolicies:
+      - containerName: silencer
+        controlledResources: ["memory"]
+        minAllowed:
+          memory: 32Mi
+        maxAllowed:
+          memory: 256Mi
+
+# Optional PodDisruptionBudget. Off by default because the chart ships with
+# replicaCount=1 (a PDB with minAvailable=1 on a single-replica Deployment
+# would block voluntary disruptions entirely, which is rarely desired).
+podDisruptionBudget:
+  # -- Create a PDB.
+  enabled: false
+  # -- minAvailable (mutually exclusive with maxUnavailable).
+  minAvailable: ""
+  # -- maxUnavailable (mutually exclusive with minAvailable).
+  maxUnavailable: ""
+
+# Optional NetworkPolicy. The bot only needs DNS + egress to slack.com (443)
+# and to your Alertmanager URL(s). Ingress is only required when scraping.
+networkPolicy:
+  # -- Create a NetworkPolicy.
+  enabled: false
+  # -- Allow ingress to the metrics port from these selectors.
+  ingress:
+    fromNamespaceSelectors: []
+    # - matchLabels:
+    #     kubernetes.io/metadata.name: monitoring
+    fromPodSelectors: []
+    # - matchLabels:
+    #     app.kubernetes.io/name: prometheus
+  # -- Egress rules. Empty = allow all egress (recommended starting point;
+  # tighten once you know your Alertmanager IP ranges).
+  egress: []
+
+# Optional `helm test` connection check. Spins up a short-lived pod that
+# curls the metrics endpoint.
+tests:
+  # -- Enable rendering of the test pod.
+  enabled: true
+  image:
+    repository: docker.io/curlimages/curl
+    tag: 8.16.0
+    pullPolicy: IfNotPresent

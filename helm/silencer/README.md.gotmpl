@@ -1,0 +1,84 @@
+# silencer
+
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.homepageLine" . }}
+
+> **Note**: the Helm chart is published as `silencer-chart` (suffix added
+> to avoid OCI tag collisions with the container image at
+> `docker.io/vtmocanu/silencer`). The installed application's name remains
+> `silencer`.
+
+## TL;DR
+
+```bash
+kubectl create namespace monitoring
+
+# Provide tokens out-of-band (recommended)
+kubectl -n monitoring create secret generic silencer \
+  --from-literal=SLACK_APP_TOKEN=xapp-1-... \
+  --from-literal=SLACK_BOT_TOKEN=xoxb-...
+
+helm install silencer oci://registry-1.docker.io/vtmocanu/silencer-chart \
+  --version {{ .Version }} \
+  --namespace monitoring \
+  --set secrets.existing.name=silencer
+```
+
+## Introduction
+
+Silencer is a Slack bot that lets you silence
+[Prometheus Alertmanager](https://github.com/prometheus/alertmanager) alerts
+by replying directly in the Slack alert thread (`s 1h`, `s 30m`, `check`,
+`expire`). The Alertmanager URL is read off each alert's silence-button, so
+one bot can manage silences across multiple Alertmanager instances.
+
+This chart deploys silencer as a `Deployment` with optional
+`ServiceMonitor`, `VerticalPodAutoscaler`, `PodDisruptionBudget`, and
+`NetworkPolicy` resources.
+
+## Prerequisites
+
+- Kubernetes >= 1.27
+- A Slack app with Socket Mode enabled. See
+  [`Silencer_manifest.json`](https://codeberg.org/vtmocanu/silencer/src/branch/main/Silencer_manifest.json)
+  in the source repo.
+- (optional) [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)
+  CRDs if you enable `serviceMonitor`.
+- (optional) [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)
+  CRDs if you enable `verticalPodAutoscaler`.
+- (optional) [External Secrets Operator](https://external-secrets.io/) if
+  you set `secrets.mode=externalSecret`.
+
+## Secret modes
+
+| Mode             | Who owns the Secret                  | Use when                                             |
+|------------------|--------------------------------------|------------------------------------------------------|
+| `existing`       | You (created out-of-band)            | Default. Pairs well with sealed-secrets / GitOps.    |
+| `create`         | Chart (rendered from values)         | Quick demos. **Not recommended for production.**     |
+| `externalSecret` | External Secrets Operator            | You want an `ExternalSecret` CR managed by the chart.|
+
+## Replicas and Slack Socket Mode
+
+Silencer connects to Slack via Socket Mode. Slack delivers each event to
+exactly one connected client at a time, but silencer has no leader-election
+or de-duplication layer. **Run a single replica** unless you have an
+external coordination mechanism — multiple replicas can race to create
+duplicate Alertmanager silences from a single thread reply. The chart
+defaults to `replicaCount: 1` with a `Recreate` rollout strategy.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+## License
+
+Apache License 2.0 — see [LICENSE](https://codeberg.org/vtmocanu/silencer/src/branch/main/LICENSE).

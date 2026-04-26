@@ -1,0 +1,5 @@
+# Default-mode (existing Secret) smoke test for `helm template`.
+secrets:
+  mode: existing
+  existing:
+    name: silencer-test

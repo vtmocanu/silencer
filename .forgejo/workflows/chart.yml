@@ -1,0 +1,210 @@
+# Helm chart CI for the silencer chart at helm/silencer/.
+#
+# Triggers:
+#   - pull_request to main (helm/** changes) → validate only
+#   - push to main          (helm/** changes) → validate, then release if
+#                                                Chart.yaml `version:` bumped
+#
+# Release model: Chart.yaml `version:` is the single source of truth. When
+# main has a different `version:` than the previous commit (or the file
+# didn't exist before), CI packages the chart and pushes it to Docker Hub
+# at oci://registry-1.docker.io/vtmocanu/silencer-chart:<version>. No git
+# tags are needed for chart releases — chart and app image versions are
+# decoupled. (See helm-www#1717 for the `-chart` suffix rationale.)
+#
+# Required Codeberg secrets (Settings → Actions → Secrets):
+#   - DOCKERHUB_USERNAME — reused from the image workflow
+#   - DOCKERHUB_TOKEN    — reused from the image workflow (Read & Write)
+#
+# Pinned tool versions: bump manually or via Renovate once it's wired up.
+
+name: chart
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.forgejo/workflows/chart.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.forgejo/workflows/chart.yml'
+
+concurrency:
+  group: chart-${{ github.ref }}
+  # Chart pushes are idempotent (same version = same content), but cancelling
+  # mid-push could leave a partial OCI manifest. Queue instead.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CHART_DIR: helm/silencer
+  OCI_REGISTRY: registry-1.docker.io
+  OCI_NAMESPACE: vtmocanu
+  # Pinned tool versions
+  HELM_VERSION: v3.18.0
+  HELM_DOCS_VERSION: v1.14.2
+  KUBECONFORM_VERSION: v0.6.7
+  # Validate against this K8s version (matches Chart.yaml kubeVersion).
+  K8S_VERSION: 1.27.0
+
+jobs:
+  validate:
+    name: Lint and validate
+    runs-on: codeberg-small
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          # Need 2 commits so the release job can diff Chart.yaml against the
+          # previous commit. Same checkout is reused via job dependency.
+          fetch-depth: 2
+
+      - name: Install dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends ca-certificates curl tar
+
+      - name: Install helm
+        run: |
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C /tmp linux-amd64/helm
+          install -m 0755 /tmp/linux-amd64/helm /usr/local/bin/helm
+          helm version --short
+
+      - name: Install helm-docs
+        run: |
+          curl -fsSL "https://github.com/norwoodj/helm-docs/releases/download/${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION#v}_Linux_x86_64.tar.gz" \
+            | tar -xz -C /tmp helm-docs
+          install -m 0755 /tmp/helm-docs /usr/local/bin/helm-docs
+          helm-docs --version
+
+      - name: Install kubeconform
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C /tmp kubeconform
+          install -m 0755 /tmp/kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: helm lint (strict)
+        run: helm lint --strict "${CHART_DIR}"
+
+      - name: helm template + kubeconform (each ci/ scenario)
+        run: |
+          set -euo pipefail
+          fail=0
+          for f in "${CHART_DIR}"/ci/*.yaml; do
+            echo "=== ${f} ==="
+            # Render then validate. We pull CRD schemas from the
+            # datreeio/CRDs-catalog (covers ServiceMonitor, VPA, ExternalSecret).
+            # -ignore-missing-schemas keeps CI green if a third-party CRD lacks
+            # a published schema; core K8s kinds are still strictly validated.
+            if ! helm template silencer "${CHART_DIR}" -n monitoring -f "${f}" \
+              | kubeconform \
+                  -strict \
+                  -summary \
+                  -kubernetes-version "${K8S_VERSION}" \
+                  -schema-location default \
+                  -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+                  -ignore-missing-schemas; then
+              fail=1
+            fi
+          done
+          exit "${fail}"
+
+      - name: helm-docs drift check
+        run: |
+          helm-docs --chart-search-root=helm
+          if ! git diff --exit-code "${CHART_DIR}/README.md"; then
+            echo "::error::${CHART_DIR}/README.md is out of date. Run 'helm-docs --chart-search-root=helm' locally and commit the result."
+            exit 1
+          fi
+
+  release:
+    name: Package and push to Docker Hub
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: codeberg-small
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Install dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends ca-certificates curl tar
+
+      - name: Install helm
+        run: |
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C /tmp linux-amd64/helm
+          install -m 0755 /tmp/linux-amd64/helm /usr/local/bin/helm
+
+      - name: Detect chart version change
+        id: detect
+        run: |
+          set -euo pipefail
+          # Extract `version:` from Chart.yaml at HEAD and HEAD~1. We use grep
+          # rather than yq to avoid an extra dependency (the field is a simple
+          # top-level scalar — `version: X.Y.Z`).
+          curr=$(grep -E '^version:' "${CHART_DIR}/Chart.yaml" | awk '{print $2}' | tr -d '"' )
+          prev=$(git show HEAD~1:"${CHART_DIR}/Chart.yaml" 2>/dev/null \
+                  | grep -E '^version:' | awk '{print $2}' | tr -d '"' || true)
+          echo "current=${curr}"
+          echo "previous=${prev:-<none>}"
+          if [[ -z "${curr}" ]]; then
+            echo "::error::Chart.yaml has no version field"
+            exit 1
+          fi
+          if [[ "${curr}" != "${prev}" ]]; then
+            echo "Version changed (${prev:-<new>} → ${curr}) — release will run."
+            echo "changed=true"   >> "$GITHUB_OUTPUT"
+            echo "version=${curr}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version unchanged (${curr}) — skipping release."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package chart
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          mkdir -p /tmp/chart-out
+          helm package "${CHART_DIR}" --destination /tmp/chart-out
+          ls -la /tmp/chart-out
+
+      - name: Log in to Docker Hub OCI registry
+        if: steps.detect.outputs.changed == 'true'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          helm registry login "${OCI_REGISTRY}" \
+            -u "${DOCKERHUB_USERNAME}" \
+            --password-stdin <<< "${DOCKERHUB_TOKEN}"
+
+      - name: Push chart
+        if: steps.detect.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.detect.outputs.version }}
+        run: |
+          # Helm derives the OCI ref basename from Chart.yaml `name:`
+          # (silencer-chart) and the tag from `version:`. So this push lands at
+          # registry-1.docker.io/vtmocanu/silencer-chart:${VERSION}.
+          tarball="/tmp/chart-out/silencer-chart-${VERSION}.tgz"
+          if [[ ! -f "${tarball}" ]]; then
+            echo "::error::Expected ${tarball} but it doesn't exist"
+            ls -la /tmp/chart-out
+            exit 1
+          fi
+          helm push "${tarball}" "oci://${OCI_REGISTRY}/${OCI_NAMESPACE}"
+          echo "Pushed: oci://${OCI_REGISTRY}/${OCI_NAMESPACE}/silencer-chart:${VERSION}"
+
+      - name: Logout
+        if: always() && steps.detect.outputs.changed == 'true'
+        run: helm registry logout "${OCI_REGISTRY}" || true
