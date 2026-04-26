@@ -13,7 +13,7 @@ description: |
 type: application
 
 # Chart's own SemVer. Bump independently of appVersion.
-version: 0.1.0
+version: 0.1.1
 
 # Upstream application version. Tracks docker.io/vtmocanu/silencer tags
 # verbatim (the published tags include the leading `v`, e.g. v2.0.1).
