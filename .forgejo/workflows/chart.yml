@@ -1,23 +1,11 @@
 # Helm chart CI for the silencer chart at helm/silencer/.
 #
-# Triggers:
-#   - pull_request to main (helm/** changes) → validate only
-#   - push to main          (helm/** changes) → validate, then release if
-#                                                Chart.yaml `version:` bumped
-#   - workflow_dispatch                       → validate + release retry
-#
-# Release model: Chart.yaml `version:` is the single source of truth. When
-# main has a different `version:` than the previous commit (or the file
-# didn't exist before), CI packages the chart and pushes it to Docker Hub
-# at oci://registry-1.docker.io/vtmocanu/silencer-chart:<version>. No git
-# tags are needed for chart releases, chart and app image versions are
-# decoupled. (See helm-www#1717 for the `-chart` suffix rationale.)
-#
-# Required Codeberg secrets (Settings → Actions → Secrets):
-#   - DOCKERHUB_USERNAME — reused from the image workflow
-#   - DOCKERHUB_TOKEN    — reused from the image workflow (Read & Write)
-#
-# Pinned tool versions: bump manually or via Renovate once it's wired up.
+# Delegates to the reusable helm-chart workflow at vtmocanu/forgejo-workflows.
+# Local concerns kept here:
+#   - Triggers and paths filter (helm/** and this workflow file)
+#   - Concurrency policy (queue, don't cancel — partial OCI manifests are bad)
+#   - Chart dir + OCI namespace
+#   - Secrets (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN from Codeberg repo settings)
 
 name: chart
 
@@ -33,8 +21,8 @@ on:
       - 'helm/**'
       - '.forgejo/workflows/chart.yml'
   # Manual trigger: useful for re-running after a transient registry failure
-  # without bumping Chart.yaml. The detection step uses registry presence
-  # (not git diff) so it Just Works without extra inputs.
+  # without bumping Chart.yaml. The reusable workflow's detection step uses
+  # registry presence (not git diff) so it Just Works without extra inputs.
   workflow_dispatch: {}
 
 concurrency:
@@ -44,215 +32,14 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-
-env:
-  CHART_DIR: helm/silencer
-  OCI_REGISTRY: registry-1.docker.io
-  OCI_NAMESPACE: vtmocanu
-  # Pinned tool versions
-  # NOTE: helm v3.18.x has a regression where the first push to a not-yet-
-  # populated OCI repo fails with 401 (the initial HEAD lacks auth and the
-  # subsequent recovery is broken). Affects 3.18.0–3.18.3. Fixed in 3.19+.
-  # See helm/helm#30987 + PR #30992. Stay on v3.19+ for OCI publish.
-  HELM_VERSION: v3.20.2
-  HELM_DOCS_VERSION: v1.14.2
-  KUBECONFORM_VERSION: v0.6.7
-  # Validate against this K8s version. Should match the floor of
-  # Chart.yaml `kubeVersion:` so we catch usage of resources/fields that
-  # don't exist on our advertised minimum cluster.
-  K8S_VERSION: 1.29.0
+  contents: write   # required for helm-docs auto-commit (inherited by reusable workflow)
 
 jobs:
-  validate:
-    name: Lint and validate
-    runs-on: codeberg-small
-    steps:
-      - name: Checkout
-        uses: https://code.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 1
-          # Land on the actual branch so we can commit back if helm-docs drifts.
-          # Default for PR events is refs/pull/N/merge (detached HEAD), which
-          # blocks pushing.
-          ref: ${{ github.head_ref || github.ref_name }}
-
-      - name: Install dependencies
-        run: |
-          apt-get update -qq
-          apt-get install -y --no-install-recommends ca-certificates curl tar
-
-      - name: Install helm
-        run: |
-          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
-            | tar -xz -C /tmp linux-amd64/helm
-          install -m 0755 /tmp/linux-amd64/helm /usr/local/bin/helm
-          helm version --short
-
-      - name: Install helm-docs
-        run: |
-          curl -fsSL "https://github.com/norwoodj/helm-docs/releases/download/${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION#v}_Linux_x86_64.tar.gz" \
-            | tar -xz -C /tmp helm-docs
-          install -m 0755 /tmp/helm-docs /usr/local/bin/helm-docs
-          helm-docs --version
-
-      - name: Install kubeconform
-        run: |
-          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
-            | tar -xz -C /tmp kubeconform
-          install -m 0755 /tmp/kubeconform /usr/local/bin/kubeconform
-          kubeconform -v
-
-      - name: helm lint (strict)
-        run: helm lint --strict "${CHART_DIR}"
-
-      - name: helm template + kubeconform (each ci/ scenario)
-        run: |
-          set -euo pipefail
-          fail=0
-          for f in "${CHART_DIR}"/ci/*.yaml; do
-            echo "=== ${f} ==="
-            # Render then validate. We pull CRD schemas from the
-            # datreeio/CRDs-catalog (covers ServiceMonitor, VPA, ExternalSecret).
-            # -ignore-missing-schemas keeps CI green if a third-party CRD lacks
-            # a published schema; core K8s kinds are still strictly validated.
-            if ! helm template silencer "${CHART_DIR}" -n monitoring -f "${f}" \
-              | kubeconform \
-                  -strict \
-                  -summary \
-                  -kubernetes-version "${K8S_VERSION}" \
-                  -schema-location default \
-                  -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
-                  -ignore-missing-schemas; then
-              fail=1
-            fi
-          done
-          exit "${fail}"
-
-      - name: helm-docs (regenerate + auto-commit if drifted)
-        run: |
-          set -euo pipefail
-          helm-docs --chart-search-root=helm
-          if git diff --quiet "${CHART_DIR}/README.md"; then
-            echo "README already up to date"
-            exit 0
-          fi
-
-          # Fork PRs can't be pushed back to — surface a helpful error
-          if [ "${{ github.event_name }}" = "pull_request" ] && \
-             [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
-            echo "::error::${CHART_DIR}/README.md is out of date. Run 'helm-docs --chart-search-root=helm' locally and commit the result (cannot auto-commit to a fork PR)."
-            git diff "${CHART_DIR}/README.md"
-            exit 1
-          fi
-
-          git config user.name "forgejo-actions[bot]"
-          git config user.email "noreply@forgejo-actions"
-          git add "${CHART_DIR}/README.md"
-          git commit -m "chore: regenerate helm-docs README [skip ci]"
-          git push origin HEAD:"${{ github.head_ref || github.ref_name }}"
-          echo "Auto-committed README update"
-
-  release:
-    name: Package and push to Docker Hub
-    needs: validate
-    # Run on push-to-main AND on workflow_dispatch (manual retry). Skip on PRs
-    # so fork PRs cannot reach the registry credentials. The detect step is
-    # registry-presence-based, so a manual dispatch with no version bump is a
-    # safe no-op when the chart is already published.
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      github.event_name == 'workflow_dispatch'
-    runs-on: codeberg-small
-    steps:
-      - name: Checkout
-        uses: https://code.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 1
-
-      - name: Install dependencies
-        run: |
-          apt-get update -qq
-          apt-get install -y --no-install-recommends ca-certificates curl tar
-
-      - name: Install helm
-        run: |
-          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
-            | tar -xz -C /tmp linux-amd64/helm
-          install -m 0755 /tmp/linux-amd64/helm /usr/local/bin/helm
-
-      - name: Detect whether chart version is already published
-        id: detect
-        run: |
-          set -euo pipefail
-          # Source of truth: the registry. We push iff the current Chart.yaml
-          # version is NOT yet present at oci://<registry>/<ns>/silencer-chart
-          # at that tag. This naturally handles:
-          #   - first-time publish (registry 404 → push)
-          #   - retry after a failed push (registry still 404 → push)
-          #   - workflow_dispatch reruns (no git diff needed)
-          #   - same-version subsequent commits (registry 200 → skip)
-          #   - genuine version bump (new tag 404 → push)
-          # The previous git-diff approach couldn't recover from a failed push
-          # without bumping the version, since the next commit looked identical
-          # to the prior one.
-          curr=$(grep -E '^version:' "${CHART_DIR}/Chart.yaml" | awk '{print $2}' | tr -d '"' )
-          if [[ -z "${curr}" ]]; then
-            echo "::error::Chart.yaml has no version field"
-            exit 1
-          fi
-          ref="oci://${OCI_REGISTRY}/${OCI_NAMESPACE}/silencer-chart"
-          echo "Probing ${ref} for version ${curr}…"
-          # `helm show chart` returns 0 if the chart+version exists in the
-          # registry, non-zero otherwise. Works anonymously for public repos.
-          # We swallow stderr because helm prints a noisy "Error: …" on 404
-          # which is the expected outcome on first push.
-          if helm show chart "${ref}" --version "${curr}" >/dev/null 2>&1; then
-            echo "Chart ${curr} is already published in the registry — skipping push."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Chart ${curr} is NOT yet in the registry — will publish."
-            echo "changed=true"   >> "$GITHUB_OUTPUT"
-            echo "version=${curr}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Package chart
-        if: steps.detect.outputs.changed == 'true'
-        run: |
-          mkdir -p /tmp/chart-out
-          helm package "${CHART_DIR}" --destination /tmp/chart-out
-          ls -la /tmp/chart-out
-
-      - name: Log in to Docker Hub OCI registry
-        if: steps.detect.outputs.changed == 'true'
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          # printf avoids the trailing newline `<<<` adds, which helm's
-          # registry login is more sensitive to than docker/buildah.
-          printf '%s' "${DOCKERHUB_TOKEN}" | \
-            helm registry login "${OCI_REGISTRY}" \
-              -u "${DOCKERHUB_USERNAME}" \
-              --password-stdin
-
-      - name: Push chart
-        if: steps.detect.outputs.changed == 'true'
-        env:
-          VERSION: ${{ steps.detect.outputs.version }}
-        run: |
-          # Helm derives the OCI ref basename from Chart.yaml `name:`
-          # (silencer-chart) and the tag from `version:`. So this push lands at
-          # registry-1.docker.io/vtmocanu/silencer-chart:${VERSION}.
-          tarball="/tmp/chart-out/silencer-chart-${VERSION}.tgz"
-          if [[ ! -f "${tarball}" ]]; then
-            echo "::error::Expected ${tarball} but it doesn't exist"
-            ls -la /tmp/chart-out
-            exit 1
-          fi
-          helm push "${tarball}" "oci://${OCI_REGISTRY}/${OCI_NAMESPACE}"
-          echo "Pushed: oci://${OCI_REGISTRY}/${OCI_NAMESPACE}/silencer-chart:${VERSION}"
-
-      - name: Logout
-        if: always() && steps.detect.outputs.changed == 'true'
-        run: helm registry logout "${OCI_REGISTRY}" || true
+  chart-caller:
+    uses: vtmocanu/forgejo-workflows/.forgejo/workflows/helm-chart.yml@v1.1.0
+    with:
+      chart-dir: helm/silencer
+      oci-namespace: vtmocanu
+    secrets:
+      registry-username: ${{ secrets.DOCKERHUB_USERNAME }}
+      registry-token: ${{ secrets.DOCKERHUB_TOKEN }}
