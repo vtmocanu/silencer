@@ -1,10 +1,10 @@
 # silencer
 
-A Slack bot that lets you silence [Prometheus Alertmanager](https://github.com/prometheus/alertmanager) alerts by replying directly in the Slack alert thread.
+A Slack bot that lets you silence [Prometheus Alertmanager](https://github.com/prometheus/alertmanager) alerts directly from Slack — reply `s 1h` in an alert's thread, or just type `s 1h` in the channel to silence whatever just paged.
 
 ## Overview
 
-Silencer integrates with Alertmanager to provide convenient alert silencing capabilities directly from Slack threads:
+Silencer integrates with Alertmanager to provide convenient alert silencing capabilities from Slack:
 
 - **Silence alerts** for specified durations (years, months, weeks, days, hours, minutes)
 - **Check current silences** for an alert
@@ -24,7 +24,7 @@ docker run -d --name silencer \
 
 Check [Docker Hub tags](https://hub.docker.com/r/vtmocanu/silencer/tags) for the latest version. There is intentionally no `:latest` tag — pin a specific version.
 
-Then invite the bot to your Alertmanager Slack channel and reply `s 1h` in any alert thread.
+Then invite the bot to your Alertmanager Slack channel and either reply `s 1h` in an alert's thread, or just type `s 1h` in the channel to silence the most recent alert.
 
 To get the tokens, see [Slack App Configuration](#slack-app-configuration) below.
 
@@ -60,11 +60,12 @@ Invite the bot to your Alertmanager Slack channel:
 
 ### Commands
 
-The bot **only works in threads of Alertmanager alert messages**. When an alert fires:
+The bot listens in any channel it has been invited to and supports two ways to issue a command:
 
-1. Click on the alert message from Alertmanager (look for "🔴 FIRING" messages)
-2. Reply in the thread with one of the commands below
-3. The bot extracts alert labels and creates/manages silences in Alertmanager
+- **Reply in an alert thread** → the bot acts on *that* alert. Use this when you want to silence a specific alert that may not be the most recent one in the channel.
+- **Send a message directly in the channel (no thread)** → the bot scans the last 20 messages, finds the most recent Alertmanager alert, and acts on that. Use this when you want to silence whatever just paged you, without scrolling up to open the thread.
+
+In both cases the bot extracts alert labels from the Alertmanager Slack attachment and creates/manages silences via Alertmanager's HTTP API.
 
 ```text
 # Silence alerts
@@ -89,19 +90,20 @@ expire              # Delete all active silences for this alert
 </p>
 
 1. Alertmanager posts an alert (in the screenshot: `[FIRING:3] [Z2M] Device Offline`)
-2. You click the message to open its thread
-3. You reply in thread: `s 10m`
-4. Bot replies in-thread with the silence ID, the matchers it derived from the alert labels, and the duration
-5. Later you can check: reply `check` in the same thread
-6. Bot shows: `Already Silenced - ID=… for X minutes remaining`
+2. You either:
+   - Open the alert's thread and reply `s 10m` (acts on that specific alert), **or**
+   - Just type `s 10m` in the channel directly (acts on the most recent alert in the last 20 channel messages)
+3. The bot replies in-thread with the silence ID, the matchers it derived from the alert labels, and the duration
+4. Later you can `check` in the same place to see remaining time, or `expire` to lift the silence early
 
 ### Important Notes
 
-- ✅ **Thread-only**: Bot only responds to commands in alert message threads
-- ✅ **Automatic label extraction**: Bot reads alert labels from Alertmanager attachments
-- ✅ **Multiple silences**: Can handle multiple active silences per alert
-- ✅ **Confirmation**: Always confirms actions with silence IDs
-- ⚠️ **Won't work** in regular channel messages or direct messages
+- ✅ **Two ways to invoke**: reply in an alert thread (precise), or post directly in the channel (acts on the most recent alert in the last 20 messages)
+- ✅ **Automatic label extraction**: bot reads alert labels from the Alertmanager attachment's silence-button URL
+- ✅ **Multiple silences**: can handle multiple active silences per alert
+- ✅ **Confirmation**: always confirms actions with silence IDs
+- ⚠️ **Won't work in DMs**: the bot only responds in channels it has been invited to
+- ⚠️ **Channel-mode lookback is 20 messages**: if the alert you want is older than that, reply in its thread instead
 
 ## Slack App Configuration
 
