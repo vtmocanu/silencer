@@ -1,0 +1,32 @@
+# VCS / IDE
+.git
+.gitignore
+.cursor
+.vscode
+.claude
+
+# Node / npm artifacts (we rely on `npm ci` in the image to reinstall from
+# package-lock.json; never copy a host-installed node_modules into the build
+# context, it breaks reproducibility and bloats the image).
+**/node_modules
+npm-debug.log*
+
+# devbox / task / nix
+.devbox
+.task
+juster
+task-repo
+
+# Helm chart, CI workflows, docs — not needed inside the runtime image
+helm
+.forgejo
+*.md
+LICENSE
+logo.png
+
+# Local dev
+.env
+.infisical.json
+*.tgz
+*.log
+.DS_Store
