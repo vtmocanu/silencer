@@ -89,6 +89,29 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "Resolved image tag: ${TAG}"
 
+      # Authenticate to Docker Hub BEFORE the build so the base-image pull
+      # (`node:24-alpine`) is authenticated, not anonymous. Codeberg's hosted
+      # runners share an outbound IP, so anon-pull rate limits (100/6h per
+      # IP) get exhausted quickly. Authenticated pulls have a much higher
+      # limit. Step is a no-op (with explanation) when the token is missing,
+      # which is the case for fork PRs (Forgejo does not pass secrets to
+      # fork-PR workflows by default).
+      - name: Log in to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "${DOCKERHUB_TOKEN:-}" ]; then
+            echo "::notice::No DOCKERHUB_TOKEN available (fork PR or unset secret). Falling back to anonymous Docker Hub pulls — may hit rate limits."
+            exit 0
+          fi
+          # `printf '%s'` avoids the trailing newline a heredoc/<<< would add,
+          # which some registries reject as malformed credentials.
+          printf '%s' "$DOCKERHUB_TOKEN" | \
+            buildah --storage-driver="$STORAGE_DRIVER" login docker.io \
+              -u "$DOCKERHUB_USERNAME" \
+              --password-stdin
+
       - name: Build image (linux/amd64)
         env:
           TAG: ${{ steps.tag.outputs.tag }}
@@ -98,19 +121,6 @@ jobs:
             --platform linux/amd64 \
             --tag "${IMAGE}:${TAG}" \
             .
-
-      - name: Log in to Docker Hub
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          # `printf '%s'` avoids the trailing newline a heredoc/<<< would add,
-          # which some registries reject as malformed credentials.
-          printf '%s' "$DOCKERHUB_TOKEN" | \
-            buildah --storage-driver="$STORAGE_DRIVER" login docker.io \
-              -u "$DOCKERHUB_USERNAME" \
-              --password-stdin
 
       - name: Push image to Docker Hub
         if: startsWith(github.ref, 'refs/tags/v')
