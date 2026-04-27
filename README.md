@@ -84,12 +84,16 @@ expire              # Delete all active silences for this alert
 
 ### Example Workflow
 
-1. Alertmanager posts: `🔴 [FIRING:1] HighMemoryUsage (app=frontend, env=prod)`
+<p align="center">
+  <img src="docs/thread-reply.png" alt="Silencing an alert by replying in its Slack thread" width="480">
+</p>
+
+1. Alertmanager posts an alert (in the screenshot: `[FIRING:3] [Z2M] Device Offline`)
 2. You click the message to open its thread
-3. You reply in thread: `s 2h`
-4. Bot responds: `Alert has been silenced (id=abc-123) for 2 hours`
+3. You reply in thread: `s 10m`
+4. Bot replies in-thread with the silence ID, the matchers it derived from the alert labels, and the duration
 5. Later you can check: reply `check` in the same thread
-6. Bot shows: `Already Silenced - ID=abc-123 for 1 hour 45 minutes remaining`
+6. Bot shows: `Already Silenced - ID=… for X minutes remaining`
 
 ### Important Notes
 

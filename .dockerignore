@@ -20,6 +20,7 @@ task-repo
 # Helm chart, CI workflows, docs — not needed inside the runtime image
 helm
 .forgejo
+docs
 *.md
 LICENSE
 logo.png
