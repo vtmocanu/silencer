@@ -6,7 +6,8 @@ Strategy: {{ .Values.updateStrategy.type }}
 
 Secret source: {{ .Values.secrets.mode }}
 {{- if eq .Values.secrets.mode "existing" }}
-  Reading tokens from Secret/{{ .Values.secrets.existing.name }}.
+  Reading tokens from Secret/{{ .Values.secrets.existing.name }}
+  (keys: {{ include "silencer.appTokenKey" . }}, {{ include "silencer.botTokenKey" . }}).
 {{- else if eq .Values.secrets.mode "create" }}
   Tokens were rendered into Secret/{{ include "silencer.fullname" . }} from values.
   WARNING: values stored in plain text in the Helm release storage. Prefer
@@ -36,13 +37,6 @@ exactly one connected client at a time, but the bot has no leader-election
 or de-duplication layer. With multiple replicas you may see duplicate
 silences when both pods react to the same alert thread. Pin to 1 unless
 you know what you're doing.
-{{- end }}
-
-{{- if and (eq .Values.secrets.mode "create") (or (not .Values.secrets.create.appToken) (not .Values.secrets.create.botToken)) }}
-
-ERROR: secrets.mode=create requires both secrets.create.appToken and
-secrets.create.botToken to be set. The pod will crash-loop until you
-upgrade with valid values.
 {{- end }}
 
 Next steps:

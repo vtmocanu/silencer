@@ -6,20 +6,20 @@ apiVersion: v2
 # Helm project's own recommendation in helm-www#1717. In-cluster resource
 # names stay `silencer-*` via _helpers.tpl.
 name: silencer-chart
-description: |
-  Silencer is a Slack bot that silences Prometheus Alertmanager alerts via
-  thread replies. Reply `s 1h` in any Alertmanager alert thread to create a
-  matching silence.
+description: Slack bot that silences Prometheus Alertmanager alerts via thread replies.
 type: application
 
 # Chart's own SemVer. Bump independently of appVersion.
-version: 0.1.1
+# 0.2.0: breaking — secrets.existing.appTokenKey/botTokenKey moved to
+# secrets.appTokenKey/botTokenKey (used in all modes). Liveness probe path
+# now defaults to /livez (always-200 endpoint added in app v2.0.2).
+version: 0.2.0
 
 # Upstream application version. Tracks docker.io/vtmocanu/silencer tags
-# verbatim (the published tags include the leading `v`, e.g. v2.0.1).
-appVersion: "v2.0.1"
+# verbatim (the published tags include the leading `v`, e.g. v2.0.2).
+appVersion: "v2.0.2"
 
-kubeVersion: ">=1.27.0-0"
+kubeVersion: ">=1.29.0-0"
 
 home: https://codeberg.org/vtmocanu/silencer
 sources:

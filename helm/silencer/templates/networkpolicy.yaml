@@ -1,4 +1,12 @@
 {{- if .Values.networkPolicy.enabled -}}
+{{- $np := .Values.networkPolicy -}}
+{{- /*
+  When ServiceMonitor is enabled, auto-inject an ingress rule from the
+  monitoring namespace so Prometheus can still scrape /metrics. Without this,
+  enabling networkPolicy alongside serviceMonitor silently breaks scraping.
+*/ -}}
+{{- $autoScrape := and .Values.serviceMonitor.enabled (ne $np.scrapeNamespace "") -}}
+{{- $hasManualIngress := or $np.ingress.fromNamespaceSelectors $np.ingress.fromPodSelectors -}}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -14,14 +22,18 @@ spec:
     - Ingress
     - Egress
   ingress:
-    {{- $ingress := .Values.networkPolicy.ingress -}}
-    {{- if or $ingress.fromNamespaceSelectors $ingress.fromPodSelectors }}
+    {{- if or $autoScrape $hasManualIngress }}
     - from:
-        {{- range $ingress.fromNamespaceSelectors }}
+        {{- if $autoScrape }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $np.scrapeNamespace }}
+        {{- end }}
+        {{- range $np.ingress.fromNamespaceSelectors }}
         - namespaceSelector:
             {{- toYaml . | nindent 12 }}
         {{- end }}
-        {{- range $ingress.fromPodSelectors }}
+        {{- range $np.ingress.fromPodSelectors }}
         - podSelector:
             {{- toYaml . | nindent 12 }}
         {{- end }}
@@ -32,7 +44,7 @@ spec:
     []
     {{- end }}
   egress:
-    {{- with .Values.networkPolicy.egress }}
+    {{- with $np.egress }}
     {{- toYaml . | nindent 4 }}
     {{- else }}
     - {}

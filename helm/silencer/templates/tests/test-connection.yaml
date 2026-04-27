@@ -11,10 +11,11 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   restartPolicy: Never
+  # No runAsUser/runAsGroup pin — `curlimages/curl` runs as its packaged
+  # `curl_user` (UID 100), which doesn't exist as UID 1000 in /etc/passwd.
+  # We still enforce non-root + RuntimeDefault seccomp.
   securityContext:
     runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
     seccompProfile:
       type: RuntimeDefault
   containers:

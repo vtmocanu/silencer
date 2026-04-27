@@ -36,11 +36,12 @@ podAnnotations: {}
 podLabels: {}
 
 # -- Pod-level securityContext. Defaults to non-root + restricted PSS.
+# `fsGroup` is intentionally omitted: the container runs with a read-only
+# root filesystem and mounts no PVCs, so there's nothing to chown.
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1000
   runAsGroup: 1000
-  fsGroup: 1000
   seccompProfile:
     type: RuntimeDefault
 
@@ -78,12 +79,16 @@ affinity: {}
 # -- Pod topology spread constraints.
 topologySpreadConstraints: []
 
-# Probes target the bot's `/healthz` endpoint, which returns 503 when the
-# Slack socket-mode connection has been down longer than the grace window.
+# Probe targets:
+#   /livez   — always returns 200; use for liveness so a Slack outage does
+#              not trigger restart loops.
+#   /healthz — returns 503 once Slack socket-mode has been disconnected
+#              past the in-app grace window; use for readiness so the pod
+#              is pulled out of the Service while disconnected.
 livenessProbe:
   enabled: true
   httpGet:
-    path: /healthz
+    path: /livez
     port: http
   initialDelaySeconds: 30
   periodSeconds: 30
@@ -100,7 +105,7 @@ readinessProbe:
 startupProbe:
   enabled: true
   httpGet:
-    path: /healthz
+    path: /livez
     port: http
   periodSeconds: 5
   failureThreshold: 12  # 60s to come up
@@ -134,13 +139,17 @@ secrets:
   # -- One of: existing, create, externalSecret.
   mode: existing
 
+  # -- Key inside the Secret that holds the Slack app-level token. Used in
+  # all modes (the chart writes this key when it owns the Secret, and reads
+  # this key when referencing an existing one).
+  appTokenKey: SLACK_APP_TOKEN
+  # -- Key inside the Secret that holds the Slack bot OAuth token. Used in
+  # all modes.
+  botTokenKey: SLACK_BOT_TOKEN
+
   existing:
     # -- Name of the existing Secret. Required when mode=existing.
     name: silencer
-    # -- Key inside the Secret holding the Slack app-level token.
-    appTokenKey: SLACK_APP_TOKEN
-    # -- Key inside the Secret holding the Slack bot OAuth token.
-    botTokenKey: SLACK_BOT_TOKEN
 
   create:
     # -- App-level token (xapp-…). Required when mode=create.
@@ -237,9 +246,20 @@ podDisruptionBudget:
 
 # Optional NetworkPolicy. The bot only needs DNS + egress to slack.com (443)
 # and to your Alertmanager URL(s). Ingress is only required when scraping.
+#
+# When `serviceMonitor.enabled=true`, the chart auto-injects an ingress rule
+# that allows traffic from the namespace given by
+# `networkPolicy.scrapeNamespace` (default `monitoring`). Without that,
+# enabling the NetworkPolicy alongside the ServiceMonitor silently breaks
+# Prometheus scraping.
 networkPolicy:
   # -- Create a NetworkPolicy.
   enabled: false
+  # -- Namespace label value (`kubernetes.io/metadata.name`) of the
+  # Prometheus instance scraping `/metrics`. Used to auto-allow scrape
+  # traffic when `serviceMonitor.enabled=true`. Set to "" to opt out and
+  # configure ingress manually below.
+  scrapeNamespace: monitoring
   # -- Allow ingress to the metrics port from these selectors.
   ingress:
     fromNamespaceSelectors: []

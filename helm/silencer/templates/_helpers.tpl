@@ -36,10 +36,27 @@ Create chart name and version as used by the chart label.
 {{- end }}
 
 {{/*
-Common labels.
+Common labels — applied to top-level resource metadata.
+Includes chart version, which intentionally does NOT appear on the pod template
+(otherwise every chart-only version bump would force a pod rollout).
 */}}
 {{- define "silencer.labels" -}}
 helm.sh/chart: {{ include "silencer.chart" . }}
+{{ include "silencer.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: monitoring
+{{- end }}
+
+{{/*
+Pod-template labels — selectorLabels (stable across releases) plus the app
+version label (rolls when the upstream image moves, which is what we want).
+Crucially this excludes `helm.sh/chart`, so chart-only version bumps do not
+trigger pod rollouts.
+*/}}
+{{- define "silencer.podLabels" -}}
 {{ include "silencer.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
@@ -92,23 +109,17 @@ Name of the Secret holding Slack tokens (whatever the source mode).
 {{- end }}
 
 {{/*
-Key in the Secret holding the Slack app-level token.
+Key in the Secret holding the Slack app-level token. Same value across all
+secret modes — the chart writes this key when it owns the Secret, and reads
+this key when referencing an existing Secret.
 */}}
 {{- define "silencer.appTokenKey" -}}
-{{- if eq .Values.secrets.mode "existing" -}}
-{{- .Values.secrets.existing.appTokenKey -}}
-{{- else -}}
-SLACK_APP_TOKEN
-{{- end -}}
+{{- default "SLACK_APP_TOKEN" .Values.secrets.appTokenKey -}}
 {{- end }}
 
 {{/*
 Key in the Secret holding the Slack bot token.
 */}}
 {{- define "silencer.botTokenKey" -}}
-{{- if eq .Values.secrets.mode "existing" -}}
-{{- .Values.secrets.existing.botTokenKey -}}
-{{- else -}}
-SLACK_BOT_TOKEN
-{{- end -}}
+{{- default "SLACK_BOT_TOKEN" .Values.secrets.botTokenKey -}}
 {{- end }}

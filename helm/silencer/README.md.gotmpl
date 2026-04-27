@@ -43,7 +43,7 @@ This chart deploys silencer as a `Deployment` with optional
 
 ## Prerequisites
 
-- Kubernetes >= 1.27
+- Kubernetes >= 1.29
 - A Slack app with Socket Mode enabled. See
   [`Silencer_manifest.json`](https://codeberg.org/vtmocanu/silencer/src/branch/main/Silencer_manifest.json)
   in the source repo.
@@ -62,12 +62,36 @@ This chart deploys silencer as a `Deployment` with optional
 | `create`         | Chart (rendered from values)         | Quick demos. **Not recommended for production.**     |
 | `externalSecret` | External Secrets Operator            | You want an `ExternalSecret` CR managed by the chart.|
 
+The keys inside the Secret are configurable via `secrets.appTokenKey` and
+`secrets.botTokenKey` (defaults: `SLACK_APP_TOKEN` / `SLACK_BOT_TOKEN`). The
+same key names apply to all three modes.
+
+## Probes
+
+The container exposes two HTTP endpoints used by kubelet probes:
+
+| Path       | What it returns                               | Used for     |
+|------------|-----------------------------------------------|--------------|
+| `/livez`   | always 200                                    | liveness     |
+| `/healthz` | 503 once Slack socket-mode has been down past the in-app grace window | readiness    |
+
+This split means a Slack outage pulls pods out of the Service (via readiness)
+without restarting them (via liveness). Override either probe via the usual
+`livenessProbe` / `readinessProbe` value blocks.
+
+## NetworkPolicy + ServiceMonitor
+
+When both `networkPolicy.enabled` and `serviceMonitor.enabled` are true, the
+chart auto-injects an ingress rule allowing traffic from the namespace given
+by `networkPolicy.scrapeNamespace` (default: `monitoring`). Set that value
+to `""` to opt out and configure ingress manually.
+
 ## Replicas and Slack Socket Mode
 
 Silencer connects to Slack via Socket Mode. Slack delivers each event to
 exactly one connected client at a time, but silencer has no leader-election
 or de-duplication layer. **Run a single replica** unless you have an
-external coordination mechanism — multiple replicas can race to create
+external coordination mechanism, multiple replicas can race to create
 duplicate Alertmanager silences from a single thread reply. The chart
 defaults to `replicaCount: 1` with a `Recreate` rollout strategy.
 

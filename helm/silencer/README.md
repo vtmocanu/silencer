@@ -1,10 +1,8 @@
 # silencer
 
-Silencer is a Slack bot that silences Prometheus Alertmanager alerts via
-thread replies. Reply `s 1h` in any Alertmanager alert thread to create a
-matching silence.
+Slack bot that silences Prometheus Alertmanager alerts via thread replies.
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.1](https://img.shields.io/badge/AppVersion-v2.0.1-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.2](https://img.shields.io/badge/AppVersion-v2.0.2-informational?style=flat-square)
 
 **Homepage:** <https://codeberg.org/vtmocanu/silencer>
 
@@ -24,7 +22,7 @@ kubectl -n monitoring create secret generic silencer \
   --from-literal=SLACK_BOT_TOKEN=xoxb-...
 
 helm install silencer oci://registry-1.docker.io/vtmocanu/silencer-chart \
-  --version 0.1.1 \
+  --version 0.2.0 \
   --namespace monitoring \
   --set secrets.existing.name=silencer
 ```
@@ -43,7 +41,7 @@ This chart deploys silencer as a `Deployment` with optional
 
 ## Prerequisites
 
-- Kubernetes >= 1.27
+- Kubernetes >= 1.29
 - A Slack app with Socket Mode enabled. See
   [`Silencer_manifest.json`](https://codeberg.org/vtmocanu/silencer/src/branch/main/Silencer_manifest.json)
   in the source repo.
@@ -62,12 +60,36 @@ This chart deploys silencer as a `Deployment` with optional
 | `create`         | Chart (rendered from values)         | Quick demos. **Not recommended for production.**     |
 | `externalSecret` | External Secrets Operator            | You want an `ExternalSecret` CR managed by the chart.|
 
+The keys inside the Secret are configurable via `secrets.appTokenKey` and
+`secrets.botTokenKey` (defaults: `SLACK_APP_TOKEN` / `SLACK_BOT_TOKEN`). The
+same key names apply to all three modes.
+
+## Probes
+
+The container exposes two HTTP endpoints used by kubelet probes:
+
+| Path       | What it returns                               | Used for     |
+|------------|-----------------------------------------------|--------------|
+| `/livez`   | always 200                                    | liveness     |
+| `/healthz` | 503 once Slack socket-mode has been down past the in-app grace window | readiness    |
+
+This split means a Slack outage pulls pods out of the Service (via readiness)
+without restarting them (via liveness). Override either probe via the usual
+`livenessProbe` / `readinessProbe` value blocks.
+
+## NetworkPolicy + ServiceMonitor
+
+When both `networkPolicy.enabled` and `serviceMonitor.enabled` are true, the
+chart auto-injects an ingress rule allowing traffic from the namespace given
+by `networkPolicy.scrapeNamespace` (default: `monitoring`). Set that value
+to `""` to opt out and configure ingress manually.
+
 ## Replicas and Slack Socket Mode
 
 Silencer connects to Slack via Socket Mode. Slack delivers each event to
 exactly one connected client at a time, but silencer has no leader-election
 or de-duplication layer. **Run a single replica** unless you have an
-external coordination mechanism — multiple replicas can race to create
+external coordination mechanism, multiple replicas can race to create
 duplicate Alertmanager silences from a single thread reply. The chart
 defaults to `replicaCount: 1` with a `Recreate` rollout strategy.
 
@@ -83,7 +105,7 @@ defaults to `replicaCount: 1` with a `Recreate` rollout strategy.
 
 ## Requirements
 
-Kubernetes: `>=1.27.0-0`
+Kubernetes: `>=1.29.0-0`
 
 ## Values
 
@@ -102,7 +124,7 @@ Kubernetes: `>=1.27.0-0`
 | imagePullSecrets | list | `[]` | imagePullSecrets to use for pulling the image. Names of existing Secrets. |
 | livenessProbe.enabled | bool | `true` |  |
 | livenessProbe.failureThreshold | int | `3` |  |
-| livenessProbe.httpGet.path | string | `"/healthz"` |  |
+| livenessProbe.httpGet.path | string | `"/livez"` |  |
 | livenessProbe.httpGet.port | string | `"http"` |  |
 | livenessProbe.initialDelaySeconds | int | `30` |  |
 | livenessProbe.periodSeconds | int | `30` |  |
@@ -112,13 +134,14 @@ Kubernetes: `>=1.27.0-0`
 | networkPolicy.egress | list | `[]` | Egress rules. Empty = allow all egress (recommended starting point; tighten once you know your Alertmanager IP ranges). |
 | networkPolicy.enabled | bool | `false` | Create a NetworkPolicy. |
 | networkPolicy.ingress | object | `{"fromNamespaceSelectors":[],"fromPodSelectors":[]}` | Allow ingress to the metrics port from these selectors. |
+| networkPolicy.scrapeNamespace | string | `"monitoring"` | Namespace label value (`kubernetes.io/metadata.name`) of the Prometheus instance scraping `/metrics`. Used to auto-allow scrape traffic when `serviceMonitor.enabled=true`. Set to "" to opt out and configure ingress manually below. |
 | nodeSelector | object | `{}` | nodeSelector for pod scheduling. |
 | podAnnotations | object | `{}` | Pod-level annotations. The chart automatically adds a checksum annotation that triggers a rollout when secret values change. |
 | podDisruptionBudget.enabled | bool | `false` | Create a PDB. |
 | podDisruptionBudget.maxUnavailable | string | `""` | maxUnavailable (mutually exclusive with minAvailable). |
 | podDisruptionBudget.minAvailable | string | `""` | minAvailable (mutually exclusive with maxUnavailable). |
 | podLabels | object | `{}` | Pod-level labels. |
-| podSecurityContext | object | `{"fsGroup":1000,"runAsGroup":1000,"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod-level securityContext. Defaults to non-root + restricted PSS. |
+| podSecurityContext | object | `{"runAsGroup":1000,"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod-level securityContext. Defaults to non-root + restricted PSS. `fsGroup` is intentionally omitted: the container runs with a read-only root filesystem and mounts no PVCs, so there's nothing to chown. |
 | priorityClassName | string | `""` | Priority class. Empty string falls through to the namespace default. |
 | readinessProbe.enabled | bool | `true` |  |
 | readinessProbe.failureThreshold | int | `3` |  |
@@ -128,11 +151,11 @@ Kubernetes: `>=1.27.0-0`
 | readinessProbe.timeoutSeconds | int | `3` |  |
 | replicaCount | int | `1` | Number of pod replicas. Silencer uses Slack Socket Mode, which delivers each event to exactly one connected client; running >1 replica risks duplicate Alertmanager silences when both pods react to the same thread message. Keep this at 1 unless you have a coordination layer. |
 | resources | object | `{"limits":{"memory":"128Mi"},"requests":{"cpu":"10m","memory":"64Mi"}}` | Resource requests and limits. Memory limit is set conservatively for the Node.js runtime; tune via VPA if enabled. |
+| secrets.appTokenKey | string | `"SLACK_APP_TOKEN"` | Key inside the Secret that holds the Slack app-level token. Used in all modes (the chart writes this key when it owns the Secret, and reads this key when referencing an existing one). |
+| secrets.botTokenKey | string | `"SLACK_BOT_TOKEN"` | Key inside the Secret that holds the Slack bot OAuth token. Used in all modes. |
 | secrets.create.annotations | object | `{}` | Extra annotations on the created Secret. |
 | secrets.create.appToken | string | `""` | App-level token (xapp-…). Required when mode=create. |
 | secrets.create.botToken | string | `""` | Bot OAuth token (xoxb-…). Required when mode=create. |
-| secrets.existing.appTokenKey | string | `"SLACK_APP_TOKEN"` | Key inside the Secret holding the Slack app-level token. |
-| secrets.existing.botTokenKey | string | `"SLACK_BOT_TOKEN"` | Key inside the Secret holding the Slack bot OAuth token. |
 | secrets.existing.name | string | `"silencer"` | Name of the existing Secret. Required when mode=existing. |
 | secrets.externalSecret.annotations | object | `{}` | Extra annotations on the created ExternalSecret. |
 | secrets.externalSecret.appToken | object | `{"remoteRef":{"key":"","property":""}}` | Remote keys for each token. The `key` field follows your provider's conventions (e.g. Infisical: "/path/to/secret"; AWS: "/prod/silencer"). |
@@ -158,7 +181,7 @@ Kubernetes: `>=1.27.0-0`
 | serviceMonitor.scrapeTimeout | string | `"10s"` | Scrape timeout. |
 | startupProbe.enabled | bool | `true` |  |
 | startupProbe.failureThreshold | int | `12` |  |
-| startupProbe.httpGet.path | string | `"/healthz"` |  |
+| startupProbe.httpGet.path | string | `"/livez"` |  |
 | startupProbe.httpGet.port | string | `"http"` |  |
 | startupProbe.periodSeconds | int | `5` |  |
 | terminationGracePeriodSeconds | int | `30` | Termination grace period. Keep low; the bot is stateless. |
