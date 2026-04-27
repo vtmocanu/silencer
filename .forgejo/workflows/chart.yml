@@ -4,12 +4,13 @@
 #   - pull_request to main (helm/** changes) → validate only
 #   - push to main          (helm/** changes) → validate, then release if
 #                                                Chart.yaml `version:` bumped
+#   - workflow_dispatch                       → validate + release retry
 #
 # Release model: Chart.yaml `version:` is the single source of truth. When
 # main has a different `version:` than the previous commit (or the file
 # didn't exist before), CI packages the chart and pushes it to Docker Hub
 # at oci://registry-1.docker.io/vtmocanu/silencer-chart:<version>. No git
-# tags are needed for chart releases — chart and app image versions are
+# tags are needed for chart releases, chart and app image versions are
 # decoupled. (See helm-www#1717 for the `-chart` suffix rationale.)
 #
 # Required Codeberg secrets (Settings → Actions → Secrets):
@@ -57,8 +58,10 @@ env:
   HELM_VERSION: v3.20.2
   HELM_DOCS_VERSION: v1.14.2
   KUBECONFORM_VERSION: v0.6.7
-  # Validate against this K8s version (matches Chart.yaml kubeVersion).
-  K8S_VERSION: 1.27.0
+  # Validate against this K8s version. Should match the floor of
+  # Chart.yaml `kubeVersion:` so we catch usage of resources/fields that
+  # don't exist on our advertised minimum cluster.
+  K8S_VERSION: 1.29.0
 
 jobs:
   validate:
@@ -66,11 +69,9 @@ jobs:
     runs-on: codeberg-small
     steps:
       - name: Checkout
-        uses: https://code.forgejo.org/actions/checkout@v4
+        uses: https://code.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          # Need 2 commits so the release job can diff Chart.yaml against the
-          # previous commit. Same checkout is reused via job dependency.
-          fetch-depth: 2
+          fetch-depth: 1
 
       - name: Install dependencies
         run: |
@@ -135,13 +136,19 @@ jobs:
   release:
     name: Package and push to Docker Hub
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Run on push-to-main AND on workflow_dispatch (manual retry). Skip on PRs
+    # so fork PRs cannot reach the registry credentials. The detect step is
+    # registry-presence-based, so a manual dispatch with no version bump is a
+    # safe no-op when the chart is already published.
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
     runs-on: codeberg-small
     steps:
       - name: Checkout
-        uses: https://code.forgejo.org/actions/checkout@v4
+        uses: https://code.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          fetch-depth: 2
+          fetch-depth: 1
 
       - name: Install dependencies
         run: |
@@ -202,9 +209,12 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          helm registry login "${OCI_REGISTRY}" \
-            -u "${DOCKERHUB_USERNAME}" \
-            --password-stdin <<< "${DOCKERHUB_TOKEN}"
+          # printf avoids the trailing newline `<<<` adds, which helm's
+          # registry login is more sensitive to than docker/buildah.
+          printf '%s' "${DOCKERHUB_TOKEN}" | \
+            helm registry login "${OCI_REGISTRY}" \
+              -u "${DOCKERHUB_USERNAME}" \
+              --password-stdin
 
       - name: Push chart
         if: steps.detect.outputs.changed == 'true'

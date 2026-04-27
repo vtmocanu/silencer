@@ -12,7 +12,7 @@
 #   - amd64 only for now; multi-arch (linux/arm64) is doable later via
 #     `buildah manifest` + QEMU but is significantly slower on hosted runners.
 #   - Versioning is manual via `git tag vX.Y.Z` (no semantic-release yet).
-#   - No `:latest` tag — every push to Docker Hub is exactly the git tag.
+#   - No `:latest` tag, every push to Docker Hub is exactly the git tag.
 #
 # Required Codeberg secrets (Settings → Actions → Secrets):
 #   - DOCKERHUB_USERNAME — Docker Hub username (could be a variable instead)
@@ -24,8 +24,24 @@ name: build
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'helm/**'
+      - 'docs/**'
+      - 'logo.png'
+      - '.releaserc.json'
+      - '.grype.yaml'
+      - '.trivyignore'
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'helm/**'
+      - 'docs/**'
+      - 'logo.png'
+      - '.releaserc.json'
+      - '.grype.yaml'
+      - '.trivyignore'
     tags:
       - 'v*'
 
@@ -49,8 +65,10 @@ jobs:
     name: Build and Push
     runs-on: codeberg-small
     steps:
+      # Pinned to commit SHA (v4) — never trust floating action tags on a
+      # public OSS repo. Bump via Renovate once it's wired up.
       - name: Checkout
-        uses: https://code.forgejo.org/actions/checkout@v4
+        uses: https://code.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install buildah
         run: |
@@ -87,9 +105,12 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          buildah --storage-driver="$STORAGE_DRIVER" login docker.io \
-            -u "$DOCKERHUB_USERNAME" \
-            --password-stdin <<< "$DOCKERHUB_TOKEN"
+          # `printf '%s'` avoids the trailing newline a heredoc/<<< would add,
+          # which some registries reject as malformed credentials.
+          printf '%s' "$DOCKERHUB_TOKEN" | \
+            buildah --storage-driver="$STORAGE_DRIVER" login docker.io \
+              -u "$DOCKERHUB_USERNAME" \
+              --password-stdin
 
       - name: Push image to Docker Hub
         if: startsWith(github.ref, 'refs/tags/v')
