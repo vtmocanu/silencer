@@ -2,7 +2,7 @@
 
 Slack bot that silences Prometheus Alertmanager alerts via thread replies.
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.2](https://img.shields.io/badge/AppVersion-v2.0.2-informational?style=flat-square)
+![Version: 0.2.1](https://img.shields.io/badge/Version-0.2.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.3](https://img.shields.io/badge/AppVersion-v2.0.3-informational?style=flat-square)
 
 **Homepage:** <https://codeberg.org/vtmocanu/silencer>
 
@@ -22,7 +22,7 @@ kubectl -n monitoring create secret generic silencer \
   --from-literal=SLACK_BOT_TOKEN=xoxb-...
 
 helm install silencer oci://registry-1.docker.io/vtmocanu/silencer-chart \
-  --version 0.2.0 \
+  --version 0.2.1 \
   --namespace monitoring \
   --set secrets.existing.name=silencer
 ```

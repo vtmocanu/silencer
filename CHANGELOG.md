@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-04-27
+
+### Fixed
+- **Crash on alerts without a Silence button.** When a user replied with
+  `s 1w` (or similar) to a Slack alert whose attachment did not include
+  the `Silence :no_bell:` action button, `findAlertMessageFilter` called
+  `.url` on `undefined` and crashed the bolt event handler. The bot now
+  treats this as "no alert here" (logs at debug) and falls through, so
+  the channel-history search keeps looking and the thread case returns
+  cleanly. This typically happens when an alertname contains characters
+  that break Slack's button URL validation (spaces, brackets), causing
+  Slack to silently drop the button from the rendered message.
+
 ## [2.0.2] - 2026-04-27
 
 ### Added

@@ -10,14 +10,18 @@ description: Slack bot that silences Prometheus Alertmanager alerts via thread r
 type: application
 
 # Chart's own SemVer. Bump independently of appVersion.
+# 0.2.1: bumps appVersion to v2.0.3 (bot now no longer crashes when
+#        replying `s 1h` to an alert whose Slack template lacks a
+#        Silence button).
 # 0.2.0: breaking — secrets.existing.appTokenKey/botTokenKey moved to
-# secrets.appTokenKey/botTokenKey (used in all modes). Liveness probe path
-# now defaults to /livez (always-200 endpoint added in app v2.0.2).
-version: 0.2.0
+#        secrets.appTokenKey/botTokenKey (used in all modes). Liveness
+#        probe path now defaults to /livez (always-200 endpoint added
+#        in app v2.0.2).
+version: 0.2.1
 
 # Upstream application version. Tracks docker.io/vtmocanu/silencer tags
-# verbatim (the published tags include the leading `v`, e.g. v2.0.2).
-appVersion: "v2.0.2"
+# verbatim (the published tags include the leading `v`, e.g. v2.0.3).
+appVersion: "v2.0.3"
 
 kubeVersion: ">=1.29.0-0"
 

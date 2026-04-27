@@ -52,7 +52,20 @@ function findAlertMessageFilter(log, messages){
         const msg = messages[0]; // pick first message(threads) / prev message (for channel)
         if (msg.text === '' && typeof msg.attachments !== 'undefined' && msg.attachments.length > 0){ // text="", attachement contains firing info
             let attachment = msg.attachments[0];
-            let silence = attachment.actions.find(f => f.text.toLowerCase().indexOf('silence ') >= 0);
+            // The Alertmanager URL and the silence filter are both derived from
+            // the "Silence" action button URL. Some alert templates intentionally
+            // omit that button (e.g. infrastructure alerts that aren't meant to
+            // be silenced via chat). Treat those as "no alert here" instead of
+            // crashing the bolt handler.
+            if (!Array.isArray(attachment.actions) || attachment.actions.length === 0){
+                log.debug('SlackBot Silencer : attachment has no actions array');
+                return null;
+            }
+            let silence = attachment.actions.find(f => f && typeof f.text === 'string' && f.text.toLowerCase().indexOf('silence ') >= 0);
+            if (!silence || typeof silence.url !== 'string'){
+                log.debug(`SlackBot Silencer : no Silence button on alert "${attachment.title}" — cannot derive Alertmanager URL or filter`);
+                return null;
+            }
             let url = decodeURIComponent(silence.url);
             let text = url.substring(url.indexOf('filter=') + 'filter='.length);
             let replaced = text.replace(/=/i, ':');
