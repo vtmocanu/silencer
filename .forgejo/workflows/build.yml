@@ -1,23 +1,14 @@
 # Build & release workflow for silencer.
 #
-# Triggers:
-#   - pull_request to main         → build only (smoke test, no push)
-#   - push to main                 → build only (smoke test, no push)
-#   - push to tag matching v*      → build + push to Docker Hub with the tag name
+# Delegates to the reusable container-build workflow at
+# vtmocanu/forgejo-workflows. Local concerns kept here:
+#   - Triggers and paths-ignore (silencer-specific files)
+#   - Concurrency policy
+#   - Image name + push policy (only on v* tags)
+#   - Secrets (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN from Codeberg repo settings)
 #
-# Notes:
-#   - Runs on Codeberg's hosted Forgejo Actions runners (rootless Podman in LXC).
-#     Neither docker nor podman is available; we use buildah with vfs storage
-#     and chroot isolation per Codeberg's documented constraints.
-#   - amd64 only for now; multi-arch (linux/arm64) is doable later via
-#     `buildah manifest` + QEMU but is significantly slower on hosted runners.
-#   - Versioning is manual via `git tag vX.Y.Z` (no semantic-release yet).
-#   - No `:latest` tag, every push to Docker Hub is exactly the git tag.
-#
-# Required Codeberg secrets (Settings → Actions → Secrets):
-#   - DOCKERHUB_USERNAME — Docker Hub username (could be a variable instead)
-#   - DOCKERHUB_TOKEN    — Docker Hub access token with Read & Write scope
-#                          (Docker Hub → Account Settings → Personal access tokens)
+# Versioning is manual via `git tag vX.Y.Z`. No `:latest` tag — every push
+# to Docker Hub is exactly the git tag.
 
 name: build
 
@@ -54,78 +45,12 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  IMAGE: docker.io/vtmocanu/silencer
-  # Buildah flags required on Codeberg's rootless-podman-in-LXC runners.
-  STORAGE_DRIVER: vfs
-  BUILDAH_ISOLATION: chroot
-
 jobs:
   build:
-    name: Build and Push
-    runs-on: codeberg-small
-    steps:
-      # Pinned to commit SHA (v4) — never trust floating action tags on a
-      # public OSS repo. Bump via Renovate once it's wired up.
-      - name: Checkout
-        uses: https://code.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      - name: Install buildah
-        run: |
-          apt-get update -qq
-          apt-get install -y --no-install-recommends buildah ca-certificates
-          buildah --version
-
-      - name: Resolve image tag
-        id: tag
-        run: |
-          # On a v* tag, use the tag verbatim; otherwise use a short-SHA dev tag
-          # (we won't push the dev tag — it's just for the local build to succeed).
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            TAG="${GITHUB_REF_NAME}"
-          else
-            TAG="ci-${GITHUB_SHA::7}"
-          fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "Resolved image tag: ${TAG}"
-
-      # Authenticate to Docker Hub BEFORE the build so the base-image pull
-      # (`node:24-alpine`) is authenticated, not anonymous. Codeberg's hosted
-      # runners share an outbound IP, so anon-pull rate limits (100/6h per
-      # IP) get exhausted quickly. Authenticated pulls have a much higher
-      # limit. Step is a no-op (with explanation) when the token is missing,
-      # which is the case for fork PRs (Forgejo does not pass secrets to
-      # fork-PR workflows by default).
-      - name: Log in to Docker Hub
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          if [ -z "${DOCKERHUB_TOKEN:-}" ]; then
-            echo "::notice::No DOCKERHUB_TOKEN available (fork PR or unset secret). Falling back to anonymous Docker Hub pulls — may hit rate limits."
-            exit 0
-          fi
-          # `printf '%s'` avoids the trailing newline a heredoc/<<< would add,
-          # which some registries reject as malformed credentials.
-          printf '%s' "$DOCKERHUB_TOKEN" | \
-            buildah --storage-driver="$STORAGE_DRIVER" login docker.io \
-              -u "$DOCKERHUB_USERNAME" \
-              --password-stdin
-
-      - name: Build image (linux/amd64)
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          buildah --storage-driver="$STORAGE_DRIVER" bud \
-            --isolation="$BUILDAH_ISOLATION" \
-            --platform linux/amd64 \
-            --tag "${IMAGE}:${TAG}" \
-            .
-
-      - name: Push image to Docker Hub
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          buildah --storage-driver="$STORAGE_DRIVER" push "${IMAGE}:${TAG}"
-          echo "Pushed: ${IMAGE}:${TAG}"
+    uses: vtmocanu/forgejo-workflows/.forgejo/workflows/container-build.yml@v1.0.0
+    with:
+      image: docker.io/vtmocanu/silencer
+      push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    secrets:
+      registry-username: ${{ secrets.DOCKERHUB_USERNAME }}
+      registry-token: ${{ secrets.DOCKERHUB_TOKEN }}
