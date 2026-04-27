@@ -22,9 +22,17 @@ app.get('/', function (req, resp){
     resp.end('<a href="/metrics">/metrics</a>');
 });
 
-// Liveness probe: reports 503 when the Slack socket-mode connection has been
-// down longer than the grace window. The kubelet uses this to restart the pod
-// when the bot wedges (express stays up but Slack stops talking to us).
+// Always-200 endpoint for kubelet liveness. We deliberately do NOT couple
+// liveness to Slack connectivity: a Slack outage would otherwise restart
+// every silencer pod on the planet in a tight loop.
+app.get('/livez', function (req, resp){
+    resp.status(200).json({alive: true});
+});
+
+// Readiness/health endpoint: 503 when the Slack socket-mode connection has
+// been down longer than the grace window. Use this for readiness so the
+// pod is removed from the Service while disconnected, but do not use it
+// for liveness.
 app.get('/healthz', function (req, resp){
     const health = slack_silencer_bot.getHealth();
     resp.status(health.healthy ? 200 : 503).json(health);

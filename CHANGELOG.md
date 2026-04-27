@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-04-27
+
+### Added
+- New `/livez` endpoint that always returns 200. Use this for the kubelet
+  liveness probe. `/healthz` (which reports 503 during prolonged Slack
+  disconnects) should now be used only for readiness, so a Slack outage
+  no longer triggers cluster-wide restart loops.
+
+### Changed
+- **Dockerfile** is now multi-stage (`npm ci --omit=dev` in a builder stage)
+  and requires a committed `package-lock.json` for reproducible builds.
+- HEALTHCHECK now probes `/healthz` instead of `/`.
+
 ## [2.0.1] - 2026-04-27
 
 ### Changed

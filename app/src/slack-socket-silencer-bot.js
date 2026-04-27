@@ -19,7 +19,8 @@ const app = new App({
 });
 
 // Disconnections shorter than this are tolerated (normal reconnect blips).
-// Beyond this, /healthz returns 503 so the kubelet liveness probe can restart us.
+// Beyond this, /healthz returns 503 so the kubelet readiness probe can pull us
+// out of the Service. Liveness uses /livez (always 200) on purpose.
 const HEALTH_GRACE_MS = 60_000;
 
 const connectionState = {
