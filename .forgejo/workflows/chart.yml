@@ -44,7 +44,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   CHART_DIR: helm/silencer
@@ -72,6 +72,10 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 1
+          # Land on the actual branch so we can commit back if helm-docs drifts.
+          # Default for PR events is refs/pull/N/merge (detached HEAD), which
+          # blocks pushing.
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Install dependencies
         run: |
@@ -125,13 +129,29 @@ jobs:
           done
           exit "${fail}"
 
-      - name: helm-docs drift check
+      - name: helm-docs (regenerate + auto-commit if drifted)
         run: |
+          set -euo pipefail
           helm-docs --chart-search-root=helm
-          if ! git diff --exit-code "${CHART_DIR}/README.md"; then
-            echo "::error::${CHART_DIR}/README.md is out of date. Run 'helm-docs --chart-search-root=helm' locally and commit the result."
+          if git diff --quiet "${CHART_DIR}/README.md"; then
+            echo "README already up to date"
+            exit 0
+          fi
+
+          # Fork PRs can't be pushed back to — surface a helpful error
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
+             [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "::error::${CHART_DIR}/README.md is out of date. Run 'helm-docs --chart-search-root=helm' locally and commit the result (cannot auto-commit to a fork PR)."
+            git diff "${CHART_DIR}/README.md"
             exit 1
           fi
+
+          git config user.name "forgejo-actions[bot]"
+          git config user.email "noreply@forgejo-actions"
+          git add "${CHART_DIR}/README.md"
+          git commit -m "chore: regenerate helm-docs README [skip ci]"
+          git push origin HEAD:"${{ github.head_ref || github.ref_name }}"
+          echo "Auto-committed README update"
 
   release:
     name: Package and push to Docker Hub
