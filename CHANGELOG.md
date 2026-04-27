@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.1] - 2026-04-27
 
 ### Changed
-- **Container**: UID and GID for `appuser`/`appgroup` are now pinned to `1000` (was Alpine's dynamic `adduser -S`). Lets the published Helm chart's default `runAsUser: 1000` match the running container.
+- **Container**: now runs as the official Node.js image's pre-existing `node` user (UID/GID 1000) instead of a custom Alpine `appuser` with a dynamic system UID. Lets the published Helm chart's default `runAsUser: 1000` match the running container.
 
 ### Added
 - **Helm chart** at `helm/silencer/`, published as `oci://registry-1.docker.io/vtmocanu/silencer-chart`. Pluggable secret modes (`existing` / `create` / `externalSecret`), optional `ServiceMonitor` / VPA / `PodDisruptionBudget` / `NetworkPolicy`. See chart README for installation.

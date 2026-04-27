@@ -1,7 +1,7 @@
 FROM node:24-alpine
 
-RUN addgroup -g 1000 -S appgroup && adduser -u 1000 -S appuser -G appgroup
-
+# node:*-alpine ships with a `node` user/group at UID/GID 1000. Reuse it
+# instead of creating a duplicate (which collides on `addgroup -g 1000`).
 WORKDIR /app
 
 COPY app/package*.json ./
@@ -11,7 +11,7 @@ RUN npm install --omit=dev && \
 
 COPY app/ ./
 
-USER appuser
+USER node
 
 EXPOSE 3000
 
