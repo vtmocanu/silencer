@@ -183,7 +183,7 @@ Kubernetes: `>=1.29.0-0`
 | tests.enabled | bool | `true` | Enable rendering of the test pod. |
 | tests.image.pullPolicy | string | `"IfNotPresent"` |  |
 | tests.image.repository | string | `"docker.io/curlimages/curl"` |  |
-| tests.image.tag | string | `"8.16.0"` |  |
+| tests.image.tag | string | `"8.19.0"` |  |
 | tolerations | list | `[]` | Pod tolerations. |
 | topologySpreadConstraints | list | `[]` | Pod topology spread constraints. |
 | updateStrategy | object | `{"type":"Recreate"}` | Deployment update strategy. `Recreate` avoids two pods holding Socket Mode connections during a rollout, which is the safest default for single-replica socket-mode bots. |
