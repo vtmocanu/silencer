@@ -8,11 +8,6 @@
 
 {{ template "chart.homepageLine" . }}
 
-> **Note**: the Helm chart is published as `silencer-chart` (suffix added
-> to avoid OCI tag collisions with the container image at
-> `docker.io/vtmocanu/silencer`). The installed application's name remains
-> `silencer`.
-
 ## TL;DR
 
 ```bash
@@ -23,7 +18,7 @@ kubectl -n monitoring create secret generic silencer \
   --from-literal=SLACK_APP_TOKEN=xapp-1-... \
   --from-literal=SLACK_BOT_TOKEN=xoxb-...
 
-helm install silencer oci://registry-1.docker.io/vtmocanu/silencer-chart \
+helm install silencer oci://ghcr.io/vtmocanu/charts/silencer \
   --version {{ .Version }} \
   --namespace monitoring \
   --set secrets.existing.name=silencer

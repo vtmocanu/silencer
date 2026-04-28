@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Chart
+
+- **Chart 0.3.0 (BREAKING)**: chart name renamed `silencer-chart` → `silencer` (drops the Docker Hub flat-namespace workaround now that we publish to GHCR). Default `image.repository` moved `docker.io/vtmocanu/silencer` → `ghcr.io/vtmocanu/silencer`. Chart now published at `oci://ghcr.io/vtmocanu/charts/silencer` (was `oci://registry-1.docker.io/vtmocanu/silencer-chart`). Existing installs that pinned the old OCI URL or relied on the Docker Hub default will need their `helm install`/`HelmRelease` updated.
+
+### CI
+
+- Workflows ported from `.forgejo/workflows/` (Codeberg) to `.github/workflows/` (GitHub Actions). Image build now uses `docker/build-push-action` with BuildKit GitHub Actions cache. Chart job uses `azure/setup-helm`. All third-party actions SHA-pinned for OSS supply-chain hygiene. Auth via `${{ secrets.GITHUB_TOKEN }}` (no manual Docker Hub PAT).
+
 ## [2.0.3] - 2026-04-27
 
 ### Fixed

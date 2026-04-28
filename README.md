@@ -19,10 +19,10 @@ docker run -d --name silencer \
   -e SLACK_APP_TOKEN=xapp-1-... \
   -e SLACK_BOT_TOKEN=xoxb-... \
   -p 3000:3000 \
-  docker.io/vtmocanu/silencer:v2.0.0
+  ghcr.io/vtmocanu/silencer:v2.0.3
 ```
 
-Check [Docker Hub tags](https://hub.docker.com/r/vtmocanu/silencer/tags) for the latest version. There is intentionally no `:latest` tag — pin a specific version.
+Check the [GHCR package page](https://github.com/vtmocanu/silencer/pkgs/container/silencer) for the latest version. There is intentionally no `:latest` tag — pin a specific version.
 
 Then invite the bot to your Alertmanager Slack channel and either reply `s 1h` in an alert's thread, or just type `s 1h` in the channel to silence the most recent alert.
 

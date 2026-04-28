@@ -5,7 +5,7 @@ fullnameOverride: ""
 
 image:
   # -- Container image repository.
-  repository: docker.io/vtmocanu/silencer
+  repository: ghcr.io/vtmocanu/silencer
   # -- Image pull policy.
   pullPolicy: IfNotPresent
   # -- Image tag. Defaults to the chart's appVersion when empty.

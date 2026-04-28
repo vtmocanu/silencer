@@ -1,0 +1,252 @@
+# Helm chart CI for the silencer chart at helm/silencer/.
+#
+# Triggers:
+#   - pull_request to main (helm/** changes) → validate only
+#   - push to main          (helm/** changes) → validate, then release if
+#                                                Chart.yaml `version:` bumped
+#   - workflow_dispatch                       → validate + release retry
+#
+# Release model: Chart.yaml `version:` is the source of truth. CI probes the
+# OCI registry for the current version and pushes iff missing — naturally
+# handles first publish, retry-after-failure, and dispatch reruns.
+#
+# Auth: ${{ secrets.GITHUB_TOKEN }} for both the helm-docs auto-commit
+# (contents: write) and the GHCR OCI push (packages: write). No manual creds.
+#
+# Action versions are SHA-pinned per OSS supply-chain best practice
+# (post-tj-actions/changed-files 2025 incident). The `# vX.Y.Z` comment
+# next to each SHA tracks the human-readable version.
+
+name: chart
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.github/workflows/chart.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.github/workflows/chart.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: chart-${{ github.ref }}
+  # Chart pushes are idempotent (same version = same content), but cancelling
+  # mid-push could leave a partial OCI manifest. Queue instead.
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # for helm-docs auto-commit on drift
+  packages: write   # for GHCR OCI push
+
+env:
+  CHART_DIR: helm/silencer
+  OCI_REGISTRY: ghcr.io
+  OCI_NAMESPACE: vtmocanu/charts
+  # NOTE: helm v3.18.x has a regression where the first push to a not-yet-
+  # populated OCI repo fails with 401. Affects 3.18.0–3.18.3, fixed in 3.19+.
+  # See helm/helm#30987 + #30992. Stay on v3.19+ for OCI publish.
+  HELM_VERSION: v3.20.2
+  HELM_DOCS_VERSION: v1.14.2
+  KUBECONFORM_VERSION: v0.6.7
+  # Validate against this K8s version. Should match the floor of
+  # Chart.yaml `kubeVersion:` so we catch usage of resources/fields that
+  # don't exist on our advertised minimum cluster.
+  K8S_VERSION: 1.29.0
+
+jobs:
+  validate:
+    name: Lint and validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          # Land on the actual branch so we can push the helm-docs auto-commit.
+          # Default for PR events is refs/pull/N/merge (detached HEAD).
+          ref: ${{ github.head_ref || github.ref_name }}
+          # persist-credentials: true (default) is needed so `git push` in
+          # the helm-docs auto-commit step uses the GITHUB_TOKEN.
+
+      - name: Set up helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Install helm-docs
+        env:
+          HELM_DOCS_VERSION: ${{ env.HELM_DOCS_VERSION }}
+        run: |
+          curl -fsSL "https://github.com/norwoodj/helm-docs/releases/download/${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION#v}_Linux_x86_64.tar.gz" \
+            | tar -xz -C /tmp helm-docs
+          sudo install -m 0755 /tmp/helm-docs /usr/local/bin/helm-docs
+          helm-docs --version
+
+      - name: Install kubeconform
+        env:
+          KUBECONFORM_VERSION: ${{ env.KUBECONFORM_VERSION }}
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C /tmp kubeconform
+          sudo install -m 0755 /tmp/kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: helm lint (strict)
+        run: helm lint --strict "${CHART_DIR}"
+
+      - name: helm template + kubeconform (each ci/ scenario)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          scenarios=("${CHART_DIR}"/ci/*.yaml)
+          if [ "${#scenarios[@]}" -eq 0 ]; then
+            echo "No ci/*.yaml scenarios found under ${CHART_DIR}/ci — skipping kubeconform validation"
+            exit 0
+          fi
+          fail=0
+          chart_release_name=$(basename "${CHART_DIR}")
+          for f in "${scenarios[@]}"; do
+            echo "=== ${f} ==="
+            # Render then validate. We pull CRD schemas from the
+            # datreeio/CRDs-catalog (covers ServiceMonitor, VPA, ExternalSecret).
+            # -ignore-missing-schemas keeps CI green if a third-party CRD lacks
+            # a published schema; core K8s kinds are still strictly validated.
+            if ! helm template "${chart_release_name}" "${CHART_DIR}" -n monitoring -f "${f}" \
+              | kubeconform \
+                  -strict \
+                  -summary \
+                  -kubernetes-version "${K8S_VERSION}" \
+                  -schema-location default \
+                  -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+                  -ignore-missing-schemas; then
+              fail=1
+            fi
+          done
+          exit "${fail}"
+
+      - name: helm-docs (regenerate + auto-commit if drifted)
+        env:
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+          IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          chart_search_root=$(dirname "${CHART_DIR}")
+          helm-docs --chart-search-root="${chart_search_root}"
+
+          if git diff --quiet "${CHART_DIR}/README.md"; then
+            echo "README already up to date"
+            exit 0
+          fi
+
+          # Fork PRs can't be pushed back to — surface a helpful error
+          if [ "${IS_FORK_PR}" = "true" ]; then
+            echo "::error::${CHART_DIR}/README.md is out of date. Run 'helm-docs --chart-search-root=${chart_search_root}' locally and commit (cannot auto-commit to a fork PR)."
+            git diff "${CHART_DIR}/README.md"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${CHART_DIR}/README.md"
+          git commit -m "chore: regenerate helm-docs README [skip ci]"
+          git push origin "HEAD:${BRANCH}"
+          echo "Auto-committed README update to ${BRANCH}"
+
+  release:
+    name: Package and push to GHCR
+    needs: validate
+    # Run on push-to-main AND on workflow_dispatch (manual retry). Skip on PRs
+    # so fork PRs cannot reach push credentials. The detect step is registry-
+    # presence-based, so a manual dispatch with no version bump is a safe
+    # no-op when the chart is already published.
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          # Release job doesn't push to git; don't persist GITHUB_TOKEN.
+          persist-credentials: false
+
+      - name: Set up helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Detect whether chart version is already published
+        id: detect
+        run: |
+          set -euo pipefail
+          # Source of truth: the registry. We push iff the current Chart.yaml
+          # version is NOT yet present at oci://<registry>/<ns>/<chart-name>
+          # at that tag.
+          curr=$(grep -E '^version:' "${CHART_DIR}/Chart.yaml" | awk '{print $2}' | tr -d '"' )
+          chart_name=$(grep -E '^name:' "${CHART_DIR}/Chart.yaml" | awk '{print $2}' | tr -d '"' )
+          if [[ -z "${curr}" ]] || [[ -z "${chart_name}" ]]; then
+            echo "::error::Chart.yaml is missing version: or name:"
+            exit 1
+          fi
+          ref="oci://${OCI_REGISTRY}/${OCI_NAMESPACE}/${chart_name}"
+          echo "Probing ${ref} for version ${curr}…"
+          # `helm show chart` returns 0 if the chart+version exists, non-zero
+          # otherwise.
+          if helm show chart "${ref}" --version "${curr}" >/dev/null 2>&1; then
+            echo "Chart ${curr} is already published — skipping push."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Chart ${curr} is NOT yet in the registry — will publish."
+            echo "changed=true"   >> "$GITHUB_OUTPUT"
+            echo "version=${curr}" >> "$GITHUB_OUTPUT"
+            echo "chart_name=${chart_name}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package chart
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          mkdir -p /tmp/chart-out
+          helm package "${CHART_DIR}" --destination /tmp/chart-out
+          ls -la /tmp/chart-out
+
+      - name: Log in to GHCR
+        if: steps.detect.outputs.changed == 'true'
+        env:
+          # Pass via env, never interpolate ${{ secrets.* }} into bash directly.
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          # printf avoids the trailing newline `<<<` would add, which helm's
+          # registry login is more sensitive to than docker.
+          printf '%s' "$GHCR_TOKEN" | \
+            helm registry login "${OCI_REGISTRY}" \
+              -u "$GHCR_USER" \
+              --password-stdin
+
+      - name: Push chart
+        if: steps.detect.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.detect.outputs.version }}
+          CHART_NAME: ${{ steps.detect.outputs.chart_name }}
+        run: |
+          # Helm derives the OCI ref basename from Chart.yaml `name:` and
+          # the tag from `version:`. So this push lands at
+          # ${OCI_REGISTRY}/${OCI_NAMESPACE}/${CHART_NAME}:${VERSION}.
+          tarball="/tmp/chart-out/${CHART_NAME}-${VERSION}.tgz"
+          if [[ ! -f "${tarball}" ]]; then
+            echo "::error::Expected ${tarball} but it doesn't exist"
+            ls -la /tmp/chart-out
+            exit 1
+          fi
+          helm push "${tarball}" "oci://${OCI_REGISTRY}/${OCI_NAMESPACE}"
+          echo "Pushed: oci://${OCI_REGISTRY}/${OCI_NAMESPACE}/${CHART_NAME}:${VERSION}"
+
+      - name: Logout
+        if: always() && steps.detect.outputs.changed == 'true'
+        run: helm registry logout "${OCI_REGISTRY}" || true
