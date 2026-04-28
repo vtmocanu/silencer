@@ -7,12 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Chart
+## [2.0.4] - 2026-04-28
 
-- **Chart 0.3.0 (BREAKING)**: chart name renamed `silencer-chart` → `silencer` (drops the Docker Hub flat-namespace workaround now that we publish to GHCR). Default `image.repository` moved `docker.io/vtmocanu/silencer` → `ghcr.io/vtmocanu/silencer`. Chart now published at `oci://ghcr.io/vtmocanu/charts/silencer` (was `oci://registry-1.docker.io/vtmocanu/silencer-chart`). Existing installs that pinned the old OCI URL or relied on the Docker Hub default will need their `helm install`/`HelmRelease` updated.
+### Fixed
+- **Dockerfile HEALTHCHECK now probes `/livez` instead of `/healthz`.** The previous probe followed the readiness endpoint, which returns 503 during Slack outages and would cause `docker run`/Compose users to restart-loop in lockstep with Slack incidents. K8s deployments use the chart's own probe config and ignore Docker's HEALTHCHECK directive, so this was only a problem for non-K8s consumers. The app's own code at `slack-socket-silencer-bot.js` documents this design ("Liveness uses /livez (always 200) on purpose"); the Dockerfile now matches.
+
+### Added
+- **OCI labels on the runtime image** (`org.opencontainers.image.title`, `description`, `source`, `url`, `licenses`, `authors`). Display on GHCR's package page and ArtifactHub.
+
+### Changed
+- Runtime stage in Dockerfile is now named `runtime` for readability and external tooling references.
+
+## [Chart 0.3.1] - 2026-04-28
+
+### Changed
+- Bumps `appVersion` to `v2.0.4` (Dockerfile HEALTHCHECK fix + OCI labels). No values-schema changes.
+
+## [Chart 0.3.0] - 2026-04-28
+
+### Changed (BREAKING)
+- Chart name renamed `silencer-chart` → `silencer` (drops the Docker Hub flat-namespace workaround now that we publish to GHCR). Default `image.repository` moved `docker.io/vtmocanu/silencer` → `ghcr.io/vtmocanu/silencer`. Chart now published at `oci://ghcr.io/vtmocanu/charts/silencer` (was `oci://registry-1.docker.io/vtmocanu/silencer-chart`). Existing installs that pinned the old OCI URL or relied on the Docker Hub default need their `helm install`/`HelmRelease` updated.
 
 ### CI
-
 - Workflows ported from `.forgejo/workflows/` (Codeberg) to `.github/workflows/` (GitHub Actions). Image build now uses `docker/build-push-action` with BuildKit GitHub Actions cache. Chart job uses `azure/setup-helm`. All third-party actions SHA-pinned for OSS supply-chain hygiene. Auth via `${{ secrets.GITHUB_TOKEN }}` (no manual Docker Hub PAT).
 
 ## [2.0.3] - 2026-04-27
