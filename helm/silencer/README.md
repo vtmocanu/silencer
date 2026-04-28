@@ -2,14 +2,9 @@
 
 Slack bot that silences Prometheus Alertmanager alerts via thread replies.
 
-![Version: 0.2.1](https://img.shields.io/badge/Version-0.2.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.3](https://img.shields.io/badge/AppVersion-v2.0.3-informational?style=flat-square)
+![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.3](https://img.shields.io/badge/AppVersion-v2.0.3-informational?style=flat-square)
 
-**Homepage:** <https://codeberg.org/vtmocanu/silencer>
-
-> **Note**: the Helm chart is published as `silencer-chart` (suffix added
-> to avoid OCI tag collisions with the container image at
-> `docker.io/vtmocanu/silencer`). The installed application's name remains
-> `silencer`.
+**Homepage:** <https://github.com/vtmocanu/silencer>
 
 ## TL;DR
 
@@ -21,8 +16,8 @@ kubectl -n monitoring create secret generic silencer \
   --from-literal=SLACK_APP_TOKEN=xapp-1-... \
   --from-literal=SLACK_BOT_TOKEN=xoxb-...
 
-helm install silencer oci://registry-1.docker.io/vtmocanu/silencer-chart \
-  --version 0.2.1 \
+helm install silencer oci://ghcr.io/vtmocanu/charts/silencer \
+  --version 0.3.0 \
   --namespace monitoring \
   --set secrets.existing.name=silencer
 ```
@@ -97,11 +92,11 @@ defaults to `replicaCount: 1` with a `Recreate` rollout strategy.
 
 | Name | Email | Url |
 | ---- | ------ | --- |
-| Vlad Mocanu |  | <https://codeberg.org/vtmocanu> |
+| Vlad Mocanu |  | <https://github.com/vtmocanu> |
 
 ## Source Code
 
-* <https://codeberg.org/vtmocanu/silencer>
+* <https://github.com/vtmocanu/silencer>
 
 ## Requirements
 
@@ -119,7 +114,7 @@ Kubernetes: `>=1.29.0-0`
 | fullnameOverride | string | `""` | Override the fully qualified release name. Defaults to "<release>-<chart>". |
 | image.digest | string | `""` | Pin to an immutable digest (e.g. `sha256:abc…`). Wins over `tag` when set. |
 | image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
-| image.repository | string | `"docker.io/vtmocanu/silencer"` | Container image repository. |
+| image.repository | string | `"ghcr.io/vtmocanu/silencer"` | Container image repository. |
 | image.tag | string | `""` | Image tag. Defaults to the chart's appVersion when empty. |
 | imagePullSecrets | list | `[]` | imagePullSecrets to use for pulling the image. Names of existing Secrets. |
 | livenessProbe.enabled | bool | `true` |  |
