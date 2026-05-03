@@ -179,51 +179,51 @@
       "last_modified": "2026-01-19T00:39:23Z",
       "resolved": "github:NixOS/nixpkgs/bde09022887110deb780067364a0818e89258968?lastModified=1768783163&narHash=sha256-tLj4KcRDLakrlpvboTJDKsrp6z2XLwyQ4Zmo%2Bw8KsY4%3D"
     },
-    "grype@0.108.0": {
-      "last_modified": "2026-02-15T09:18:18Z",
-      "resolved": "github:NixOS/nixpkgs/e3cb16bccd9facebae3ba29c6a76a4cc1b73462a#grype",
+    "grype@0.111.1": {
+      "last_modified": "2026-04-28T17:03:49Z",
+      "resolved": "github:NixOS/nixpkgs/e75f25705c2934955ee5075e62530d74aca973c6#grype",
       "source": "devbox-search",
-      "version": "0.108.0",
+      "version": "0.111.1",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/rarribi3dbs42va4bzinrxv3ppl6p8mp-grype-0.108.0",
+              "path": "/nix/store/qi1jc916x4nbs0yp0y29r5jd2x62pbca-grype-0.111.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/rarribi3dbs42va4bzinrxv3ppl6p8mp-grype-0.108.0"
+          "store_path": "/nix/store/qi1jc916x4nbs0yp0y29r5jd2x62pbca-grype-0.111.1"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/72lf1svrn8l5mnw8wxc56ac2sa8sasms-grype-0.108.0",
+              "path": "/nix/store/fpznr2k75gv6cwm47dkfym7bqn04ap56-grype-0.111.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/72lf1svrn8l5mnw8wxc56ac2sa8sasms-grype-0.108.0"
+          "store_path": "/nix/store/fpznr2k75gv6cwm47dkfym7bqn04ap56-grype-0.111.1"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/5b85p4l2sxd289kpn1vvahf5vcm7qsdy-grype-0.108.0",
+              "path": "/nix/store/af6pyiikrs16jcvbl7m1a6wh6j00924q-grype-0.111.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/5b85p4l2sxd289kpn1vvahf5vcm7qsdy-grype-0.108.0"
+          "store_path": "/nix/store/af6pyiikrs16jcvbl7m1a6wh6j00924q-grype-0.111.1"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/zchgzh27rbxsdjy8zzssdc79xwwc4011-grype-0.108.0",
+              "path": "/nix/store/5myxsnjmq84sd5zcl274dx1k5rzcjsrz-grype-0.111.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/zchgzh27rbxsdjy8zzssdc79xwwc4011-grype-0.108.0"
+          "store_path": "/nix/store/5myxsnjmq84sd5zcl274dx1k5rzcjsrz-grype-0.111.1"
         }
       }
     },
