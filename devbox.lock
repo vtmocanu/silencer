@@ -604,71 +604,71 @@
         }
       }
     },
-    "skopeo@1.22.1": {
-      "last_modified": "2026-04-10T03:55:24Z",
-      "resolved": "github:NixOS/nixpkgs/9d29d5f667d7467f98efc31881e824fa586c927e#skopeo",
+    "skopeo@1.22.2": {
+      "last_modified": "2026-04-23T13:07:47Z",
+      "resolved": "github:NixOS/nixpkgs/01fbdeef22b76df85ea168fbfe1bfd9e63681b30#skopeo",
       "source": "devbox-search",
-      "version": "1.22.1",
+      "version": "1.22.2",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/1d5xy0x6cwm790f7s43lj7wnsv8s2asb-skopeo-1.22.1",
+              "path": "/nix/store/f61gh2xwnm18986n2qmjh10jxm6c6i7n-skopeo-1.22.2",
               "default": true
             },
             {
               "name": "man",
-              "path": "/nix/store/5kv4w0221krdz7kl5xbb1ra1r8afjgl9-skopeo-1.22.1-man",
+              "path": "/nix/store/pjgrpadvl20vagwzd0wivmay7m85p84y-skopeo-1.22.2-man",
               "default": true
             }
           ],
-          "store_path": "/nix/store/1d5xy0x6cwm790f7s43lj7wnsv8s2asb-skopeo-1.22.1"
+          "store_path": "/nix/store/f61gh2xwnm18986n2qmjh10jxm6c6i7n-skopeo-1.22.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/7g5vr4lzxq2x7q3ms57s7n2w9s8i20vp-skopeo-1.22.1",
+              "path": "/nix/store/137ddyf6621kbv22vrdv7rmhn75a78dh-skopeo-1.22.2",
               "default": true
             },
             {
               "name": "man",
-              "path": "/nix/store/isr1w17cf80hngc82afkx6inia4nc9j7-skopeo-1.22.1-man",
+              "path": "/nix/store/vjsliwzh03nhpmi5mhm8fm8iy2ggq7jp-skopeo-1.22.2-man",
               "default": true
             }
           ],
-          "store_path": "/nix/store/7g5vr4lzxq2x7q3ms57s7n2w9s8i20vp-skopeo-1.22.1"
+          "store_path": "/nix/store/137ddyf6621kbv22vrdv7rmhn75a78dh-skopeo-1.22.2"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/zkz7xq9sl1cifckrv2mck2fj26b1h6b7-skopeo-1.22.1",
+              "path": "/nix/store/il7j9988brc1x3xs3gg34wchcl2c4sc7-skopeo-1.22.2",
               "default": true
             },
             {
               "name": "man",
-              "path": "/nix/store/cmz8j6hbgvji4m2v1hhawrq47dwpkah1-skopeo-1.22.1-man",
+              "path": "/nix/store/6pr66l2c74zqlkkrfrgxv4gx0chffw8l-skopeo-1.22.2-man",
               "default": true
             }
           ],
-          "store_path": "/nix/store/zkz7xq9sl1cifckrv2mck2fj26b1h6b7-skopeo-1.22.1"
+          "store_path": "/nix/store/il7j9988brc1x3xs3gg34wchcl2c4sc7-skopeo-1.22.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/m817l5s2rpxangf5ysirq531ld6bi582-skopeo-1.22.1",
+              "path": "/nix/store/fwdagky9lfsyrgzxiq14zijcziazfdsn-skopeo-1.22.2",
               "default": true
             },
             {
               "name": "man",
-              "path": "/nix/store/7n6wcfv4s9r7jm4qjvcxf8rn0kpxh2nz-skopeo-1.22.1-man",
+              "path": "/nix/store/ixa8gjwsfc7b7fqpxqmk3h245zx6rfxd-skopeo-1.22.2-man",
               "default": true
             }
           ],
-          "store_path": "/nix/store/m817l5s2rpxangf5ysirq531ld6bi582-skopeo-1.22.1"
+          "store_path": "/nix/store/fwdagky9lfsyrgzxiq14zijcziazfdsn-skopeo-1.22.2"
         }
       }
     },

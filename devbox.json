@@ -5,7 +5,7 @@
     "checkov":   "3.2.521",
     "hadolint":  "2.14.0",
     "trivy":     "0.69.3",
-    "skopeo":    "1.22.1",
+    "skopeo":    "1.22.2",
     "infisical": "0.41.90",
     "dive":      "0.13.1",
     "dockle": {
