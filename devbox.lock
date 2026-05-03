@@ -1,53 +1,53 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "checkov@3.2.521": {
-      "last_modified": "2026-04-16T08:46:55Z",
-      "resolved": "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b#checkov",
+    "checkov@3.2.525": {
+      "last_modified": "2026-04-30T11:26:30Z",
+      "resolved": "github:NixOS/nixpkgs/7aaa00e7cc9be6c316cb5f6617bd740dd435c59d#checkov",
       "source": "devbox-search",
-      "version": "3.2.521",
+      "version": "3.2.525",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/kdf42av182pqzr1kjvbb8qqhp9qkdlkr-checkov-3.2.521",
+              "path": "/nix/store/s82b9w71bg33w98kmzqdga6f6gwb0ccz-checkov-3.2.525",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/8k1rzya06w804lyr142bnx47hq1rdd3g-checkov-3.2.521-dist"
+              "path": "/nix/store/kgy27hqvrp7d3233l3ncmasvl6xxr054-checkov-3.2.525-dist"
             }
           ],
-          "store_path": "/nix/store/kdf42av182pqzr1kjvbb8qqhp9qkdlkr-checkov-3.2.521"
+          "store_path": "/nix/store/s82b9w71bg33w98kmzqdga6f6gwb0ccz-checkov-3.2.525"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/9f08whykll5pq4j7l5asnxhn6m2yk5pp-checkov-3.2.521",
+              "path": "/nix/store/qp1lk8qln02217qry7n1bhjm4i3070xy-checkov-3.2.525",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/v7nhxrxz7mrmj62mw1jabffdhmqzqk0l-checkov-3.2.521-dist"
+              "path": "/nix/store/9a53jmxbnqcfr1hh59ir0p4vspfvlzf4-checkov-3.2.525-dist"
             }
           ],
-          "store_path": "/nix/store/9f08whykll5pq4j7l5asnxhn6m2yk5pp-checkov-3.2.521"
+          "store_path": "/nix/store/qp1lk8qln02217qry7n1bhjm4i3070xy-checkov-3.2.525"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/kf273114v0pqlis7xcip6p2r64r85gcp-checkov-3.2.521",
+              "path": "/nix/store/3b26dl4768b1l2ha0cyy816r12c2pgyv-checkov-3.2.525",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/28dj7l7m82mwkxnqad7r86in56d484w6-checkov-3.2.521-dist"
+              "path": "/nix/store/m73wr2lrdwwarq127dkzvhp59nnl5iv7-checkov-3.2.525-dist"
             }
           ],
-          "store_path": "/nix/store/kf273114v0pqlis7xcip6p2r64r85gcp-checkov-3.2.521"
+          "store_path": "/nix/store/3b26dl4768b1l2ha0cyy816r12c2pgyv-checkov-3.2.525"
         }
       }
     },
