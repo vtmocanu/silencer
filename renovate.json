@@ -5,5 +5,14 @@
   ],
   "ignorePaths": [
     ".forgejo/workflows/**"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["devbox"],
+      "groupName": "Devbox Packages",
+      "automerge": true,
+      "automergeType": "pr",
+      "ignoreTests": true
+    }
   ]
 }
