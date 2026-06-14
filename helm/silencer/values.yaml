@@ -221,7 +221,9 @@ serviceMonitor:
 verticalPodAutoscaler:
   # -- Create a VPA.
   enabled: false
-  # -- VPA update mode (Off, Initial, Recreate, Auto).
+  # -- VPA update mode (Off, Initial, Recreate, Auto, InPlaceOrRecreate).
+  # InPlaceOrRecreate (VPA 1.5+/k8s 1.33+) patches the running pod's requests
+  # in place instead of evicting; falls back to recreate when the node can't fit.
   updateMode: Auto
   # -- Per-container resource policy.
   resourcePolicy:
