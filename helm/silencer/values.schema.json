@@ -82,7 +82,7 @@
         "enabled": { "type": "boolean" },
         "updateMode": {
           "type": "string",
-          "enum": ["Off", "Initial", "Recreate", "Auto"]
+          "enum": ["Off", "Initial", "Recreate", "Auto", "InPlaceOrRecreate"]
         }
       }
     },

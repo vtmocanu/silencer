@@ -10,6 +10,9 @@ description: Slack bot that silences Prometheus Alertmanager alerts via thread r
 type: application
 
 # Chart's own SemVer. Bump independently of appVersion.
+# 0.3.2: allow `verticalPodAutoscaler.updateMode: InPlaceOrRecreate` in the
+#        values schema (VPA 1.5+/k8s 1.33+ in-place pod resize). The VPA
+#        template already passes the value through; the enum just blocked it.
 # 0.3.1: bumps appVersion to v2.0.4 (Dockerfile HEALTHCHECK now probes
 #        /livez instead of /healthz so docker-run users don't restart-loop
 #        during Slack outages; OCI labels added for GHCR/ArtifactHub).
@@ -23,7 +26,7 @@ type: application
 #        secrets.appTokenKey/botTokenKey (used in all modes). Liveness
 #        probe path now defaults to /livez (always-200 endpoint added
 #        in app v2.0.2).
-version: 0.3.1
+version: 0.3.2
 
 # Upstream application version. Tracks ghcr.io/vtmocanu/silencer tags
 # verbatim (the published tags include the leading `v`, e.g. v2.0.4).

@@ -2,7 +2,7 @@
 
 Slack bot that silences Prometheus Alertmanager alerts via thread replies.
 
-![Version: 0.3.1](https://img.shields.io/badge/Version-0.3.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.4](https://img.shields.io/badge/AppVersion-v2.0.4-informational?style=flat-square)
+![Version: 0.3.2](https://img.shields.io/badge/Version-0.3.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v2.0.4](https://img.shields.io/badge/AppVersion-v2.0.4-informational?style=flat-square)
 
 **Homepage:** <https://github.com/vtmocanu/silencer>
 
@@ -17,7 +17,7 @@ kubectl -n monitoring create secret generic silencer \
   --from-literal=SLACK_BOT_TOKEN=xoxb-...
 
 helm install silencer oci://ghcr.io/vtmocanu/charts/silencer \
-  --version 0.3.1 \
+  --version 0.3.2 \
   --namespace monitoring \
   --set secrets.existing.name=silencer
 ```
@@ -189,7 +189,7 @@ Kubernetes: `>=1.29.0-0`
 | updateStrategy | object | `{"type":"Recreate"}` | Deployment update strategy. `Recreate` avoids two pods holding Socket Mode connections during a rollout, which is the safest default for single-replica socket-mode bots. |
 | verticalPodAutoscaler.enabled | bool | `false` | Create a VPA. |
 | verticalPodAutoscaler.resourcePolicy | object | `{"containerPolicies":[{"containerName":"silencer","controlledResources":["memory"],"maxAllowed":{"memory":"256Mi"},"minAllowed":{"memory":"32Mi"}}]}` | Per-container resource policy. |
-| verticalPodAutoscaler.updateMode | string | `"Auto"` | VPA update mode (Off, Initial, Recreate, Auto). |
+| verticalPodAutoscaler.updateMode | string | `"Auto"` | VPA update mode (Off, Initial, Recreate, Auto, InPlaceOrRecreate). InPlaceOrRecreate (VPA 1.5+/k8s 1.33+) patches the running pod's requests in place instead of evicting; falls back to recreate when the node can't fit. |
 
 ## License
 
