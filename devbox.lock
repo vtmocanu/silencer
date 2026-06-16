@@ -1,53 +1,53 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "checkov@3.2.533": {
-      "last_modified": "2026-06-06T12:12:42Z",
-      "resolved": "github:NixOS/nixpkgs/cbb5cf358f50aa6acc9efd6113b7bcfbc352cd73#checkov",
+    "checkov@3.3.0": {
+      "last_modified": "2026-06-13T05:27:44Z",
+      "resolved": "github:NixOS/nixpkgs/5a722a7155bfc9fbe657f28d26b71860d95324bc#checkov",
       "source": "devbox-search",
-      "version": "3.2.533",
+      "version": "3.3.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/xgs8v60wj4z3jx9qd4mp1ih8vii8nw4w-checkov-3.2.533",
+              "path": "/nix/store/mql3mdgpd8k86fnmdz793r4035j2w20j-checkov-3.3.0",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/52l9ljw7apc6l62aah836dqd28kv8vqx-checkov-3.2.533-dist"
+              "path": "/nix/store/nh6p0z38pvlia3kdi01dcvjg99zlh8yy-checkov-3.3.0-dist"
             }
           ],
-          "store_path": "/nix/store/xgs8v60wj4z3jx9qd4mp1ih8vii8nw4w-checkov-3.2.533"
+          "store_path": "/nix/store/mql3mdgpd8k86fnmdz793r4035j2w20j-checkov-3.3.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/c5b1086m0rfmm18yiqjlwfc92nv74bp7-checkov-3.2.533",
+              "path": "/nix/store/3z1h7z3ra4c4lr2bsxhgib8qc13d1dma-checkov-3.3.0",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/blvxdhlwicj68wdi6i3680hapdpyk07g-checkov-3.2.533-dist"
+              "path": "/nix/store/2wndmbijpk5zzavi5b4cdg5dyp147fqq-checkov-3.3.0-dist"
             }
           ],
-          "store_path": "/nix/store/c5b1086m0rfmm18yiqjlwfc92nv74bp7-checkov-3.2.533"
+          "store_path": "/nix/store/3z1h7z3ra4c4lr2bsxhgib8qc13d1dma-checkov-3.3.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/rl9g0v2rb7g4f7236s6blxynwbmprg5y-checkov-3.2.533",
+              "path": "/nix/store/0x9dm02fzgdwdrbx5rf2a5gn5fpiar76-checkov-3.3.0",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/iw8fk7ak38g8b5j7mxbalanmxkbzwg6x-checkov-3.2.533-dist"
+              "path": "/nix/store/pvwd7xws1pfkgyfx4scjhiawl8vryjwm-checkov-3.3.0-dist"
             }
           ],
-          "store_path": "/nix/store/rl9g0v2rb7g4f7236s6blxynwbmprg5y-checkov-3.2.533"
+          "store_path": "/nix/store/0x9dm02fzgdwdrbx5rf2a5gn5fpiar76-checkov-3.3.0"
         }
       }
     },
@@ -179,51 +179,51 @@
       "last_modified": "2026-01-19T00:39:23Z",
       "resolved": "github:NixOS/nixpkgs/bde09022887110deb780067364a0818e89258968?lastModified=1768783163&narHash=sha256-tLj4KcRDLakrlpvboTJDKsrp6z2XLwyQ4Zmo%2Bw8KsY4%3D"
     },
-    "grype@0.113.0": {
-      "last_modified": "2026-06-05T19:07:58Z",
-      "resolved": "github:NixOS/nixpkgs/891eaa77f0eed53352194677991bd30978f9b0ad#grype",
+    "grype@0.114.0": {
+      "last_modified": "2026-06-11T01:27:03Z",
+      "resolved": "github:NixOS/nixpkgs/b503dde361500433ca25a32e8f4d218bf58fb659#grype",
       "source": "devbox-search",
-      "version": "0.113.0",
+      "version": "0.114.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/zsc43bhcgv9zgzkiry0l7mq1vqinbbv6-grype-0.113.0",
+              "path": "/nix/store/f9cmhbcil3l4pgrmfdxiddrmwlc239sn-grype-0.114.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/zsc43bhcgv9zgzkiry0l7mq1vqinbbv6-grype-0.113.0"
+          "store_path": "/nix/store/f9cmhbcil3l4pgrmfdxiddrmwlc239sn-grype-0.114.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/63p50pzb4aw2y8b99l1v35c5j7f1a8hz-grype-0.113.0",
+              "path": "/nix/store/qc13q1fnd9599plh58ik3xdi5agwc0mp-grype-0.114.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/63p50pzb4aw2y8b99l1v35c5j7f1a8hz-grype-0.113.0"
+          "store_path": "/nix/store/qc13q1fnd9599plh58ik3xdi5agwc0mp-grype-0.114.0"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/20gzmkwnhcw1bqai7z7q52krnlgh0x8g-grype-0.113.0",
+              "path": "/nix/store/r1wsq4wxqa8k7zzbja6jaql3z8k3lcdm-grype-0.114.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/20gzmkwnhcw1bqai7z7q52krnlgh0x8g-grype-0.113.0"
+          "store_path": "/nix/store/r1wsq4wxqa8k7zzbja6jaql3z8k3lcdm-grype-0.114.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/d1v8kr70npfcbr2mj8wnd3arkfi27k58-grype-0.113.0",
+              "path": "/nix/store/cgjskq69mag4gv0v81lyzcqdjinhdnld-grype-0.114.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/d1v8kr70npfcbr2mj8wnd3arkfi27k58-grype-0.113.0"
+          "store_path": "/nix/store/cgjskq69mag4gv0v81lyzcqdjinhdnld-grype-0.114.0"
         }
       }
     },
@@ -672,51 +672,51 @@
         }
       }
     },
-    "trivy@0.69.3": {
-      "last_modified": "2026-03-10T02:35:18Z",
-      "resolved": "github:NixOS/nixpkgs/e607cb5360ff1234862ac9f8839522becb853bb9#trivy",
+    "trivy@0.71.1": {
+      "last_modified": "2026-06-14T16:21:05Z",
+      "resolved": "github:NixOS/nixpkgs/9eac87a12312b8f60dd52e1c6e1a265f6fc7f5fc#trivy",
       "source": "devbox-search",
-      "version": "0.69.3",
+      "version": "0.71.1",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/37gxyi63yq70l6gb3wl6j3pp2g0xq821-trivy-0.69.3",
+              "path": "/nix/store/0acq67danz6lcj0807wk0qr8yvqrxf2g-trivy-0.71.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/37gxyi63yq70l6gb3wl6j3pp2g0xq821-trivy-0.69.3"
+          "store_path": "/nix/store/0acq67danz6lcj0807wk0qr8yvqrxf2g-trivy-0.71.1"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/1f1fk1q3pc9dvg8mq97v22k5b8rs2xhs-trivy-0.69.3",
+              "path": "/nix/store/zwk4961yjhwhjdrcgah08y1p4i25bvgf-trivy-0.71.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/1f1fk1q3pc9dvg8mq97v22k5b8rs2xhs-trivy-0.69.3"
+          "store_path": "/nix/store/zwk4961yjhwhjdrcgah08y1p4i25bvgf-trivy-0.71.1"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/4x992ixjpldiz1yhkynyglh5s1waqaqh-trivy-0.69.3",
+              "path": "/nix/store/qv3253928h296rp24wk2hj2zz6fblbkh-trivy-0.71.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/4x992ixjpldiz1yhkynyglh5s1waqaqh-trivy-0.69.3"
+          "store_path": "/nix/store/qv3253928h296rp24wk2hj2zz6fblbkh-trivy-0.71.1"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/4i0557ffz2bfxpq28czpxg1laas7smnm-trivy-0.69.3",
+              "path": "/nix/store/y2r9yx8l1vggjn6k09bv25fjgmawikv1-trivy-0.71.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/4i0557ffz2bfxpq28czpxg1laas7smnm-trivy-0.69.3"
+          "store_path": "/nix/store/y2r9yx8l1vggjn6k09bv25fjgmawikv1-trivy-0.71.1"
         }
       }
     }
