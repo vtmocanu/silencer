@@ -12,12 +12,12 @@
       "version":            "0.4.15",
       "excluded_platforms": ["aarch64-darwin"]
     },
-    "kubernetes-helm":          "4.2.1",
-    "nodejs_22":                "22.23.0",
-    "eslint":                   "10.5.0",
+    "kubernetes-helm":          "4.2.2",
+    "nodejs_22":                "22.23.1",
+    "eslint":                   "10.6.0",
     "kind":                     "0.31.0",
     "kubectl":                  "1.36.2",
-    "grype":                    "0.114.0"
+    "grype":                    "0.115.0"
   },
   "shell": {
     "init_hook": [
