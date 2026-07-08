@@ -2,9 +2,9 @@
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
   "packages": {
     "kics":      "2.1.19",
-    "checkov":   "3.3.0",
+    "checkov":   "3.3.6",
     "hadolint":  "2.14.0",
-    "trivy":     "0.71.2",
+    "trivy":     "0.72.0",
     "skopeo":    "1.23.0",
     "infisical": "0.41.90",
     "dive":      "0.13.1",
