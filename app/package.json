@@ -4,7 +4,7 @@
   "description": "Slack bot for silencing Alertmanager alerts",
   "main": "src/index.js",
   "dependencies": {
-    "@slack/bolt": "^4.0.0",
+    "@slack/bolt": "^5.0.0",
     "express": "^5.0.0",
     "express-prom-bundle": "^8.0.0",
     "moment": "^2.30.0",
