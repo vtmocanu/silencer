@@ -2,6 +2,8 @@
 
 A Slack bot that lets you silence [Prometheus Alertmanager](https://github.com/prometheus/alertmanager) alerts directly from Slack — reply `s 1h` in an alert's thread, or just type `s 1h` in the channel to silence whatever just paged.
 
+> This repository is maintained with help from the uzi AI factory.
+
 ## Overview
 
 Silencer integrates with Alertmanager to provide convenient alert silencing capabilities from Slack:
