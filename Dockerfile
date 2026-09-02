@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.27
 # Multi-stage build:
 #   1. builder — `npm ci` from a committed lockfile for reproducible installs
 #   2. runtime — node:24-alpine + production node_modules + source only
