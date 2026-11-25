@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-25
+
+### Changed
+- **Runtime moves to Node.js 26 LTS** (`node:26-alpine`, LTS through April 2029) from Node 24.
+- **@slack/bolt 4 to 5** (#38). None of the removed APIs are used (`WorkflowStep`, `agent`/`clientTls`, `respond()`); the socket-mode `connected`/`disconnected`/`error` events behind `/healthz` are unchanged. Slack Web API errors are now wrapped by `@slack/web-api` v8, so some log lines read differently.
+- Dependency updates: moment-timezone 0.6.6, curl 8.20.0 (chart test), CI action pins.
+
+## [Chart 0.3.3] - 2026-11-25
+
+### Changed
+- Bumps `appVersion` to `v2.1.0`. No values-schema changes.
+
 ## [2.0.4] - 2026-04-28
 
 ### Fixed
