@@ -6,7 +6,7 @@
   "dependencies": {
     "@slack/bolt": "^5.0.0",
     "express": "^5.0.0",
-    "express-prom-bundle": "^8.0.0",
+    "express-prom-bundle": "^9.0.0",
     "moment": "^2.30.0",
     "moment-timezone": "^0.6.0",
     "prom-client": "^15.1.3",
