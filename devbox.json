@@ -1,23 +1,23 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
   "packages": {
-    "kics":      "2.1.19",
-    "checkov":   "3.3.6",
+    "kics":      "2.1.21",
+    "checkov":   "3.4.5",
     "hadolint":  "2.14.0",
-    "trivy":     "0.72.0",
-    "skopeo":    "1.23.0",
-    "infisical": "0.41.90",
+    "trivy":     "0.76.2",
+    "skopeo":    "1.25.1",
+    "infisical": "0.45.6",
     "dive":      "0.13.1",
     "dockle": {
       "version":            "0.4.15",
       "excluded_platforms": ["aarch64-darwin"]
     },
-    "kubernetes-helm":          "4.2.2",
-    "nodejs_22":                "22.23.1",
-    "eslint":                   "10.6.0",
-    "kind":                     "0.31.0",
-    "kubectl":                  "1.36.2",
-    "grype":                    "0.115.0"
+    "kubernetes-helm":          "4.3.2",
+    "nodejs_22":                "22.23.5",
+    "eslint":                   "10.15.0",
+    "kind":                     "0.33.0",
+    "kubectl":                  "1.37.2",
+    "grype":                    "0.122.0"
   },
   "shell": {
     "init_hook": [
